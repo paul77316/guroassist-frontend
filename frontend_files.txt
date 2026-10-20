@@ -1,0 +1,745 @@
+﻿=== src\services\interventionService.js
+import api from './api';
+
+// Lists and statuses for the forms (concern types, intervention types, outcomes, statuses).
+export const getInterventionOptions = () => api.get('/intervention-options').then((r) => r.data.data);
+
+// List rows carry no free text. trashed => only deleted ones.
+export const listInterventions = ({ studentId, classId, trashed }) =>
+  api
+    .get(`/students/${studentId}/interventions`, {
+      params: {
+        class_assignment_id: classId || undefined,
+        trashed: trashed ? 'only' : undefined,
+      },
+    })
+    .then((r) => r.data.data);
+
+// The detail has the text, the student, the follow-up history and the allowed next statuses.
+export const getIntervention = (id) => api.get(`/interventions/${id}`).then((r) => r.data.data);
+
+export const createIntervention = ({ studentId, ...payload }) =>
+  api.post(`/students/${studentId}/interventions`, payload).then((r) => r.data.data);
+
+export const updateIntervention = ({ id, ...payload }) =>
+  api.put(`/interventions/${id}`, payload).then((r) => r.data.data);
+
+export const deleteIntervention = (id) => api.delete(`/interventions/${id}`);
+
+export const restoreIntervention = (id) => api.post(`/interventions/${id}/restore`).then((r) => r.data.data);
+
+// Record a follow-up, reschedule, completion or reopen. Returns the updated intervention.
+export const addFollowup = ({ id, ...payload }) =>
+  api.post(`/interventions/${id}/followups`, payload).then((r) => r.data.data);
+
+// Returns { data: [...], meta: { today } }
+export const listDueFollowUps = () => api.get('/follow-ups/due').then((r) => r.data);
+
+=== src\hooks\useInterventions.js
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getInterventionOptions, listInterventions, getIntervention, createIntervention,
+  updateIntervention, deleteIntervention, restoreIntervention, addFollowup, listDueFollowUps,
+} from '../services/interventionService';
+
+export const useInterventionOptions = () =>
+  useQuery({
+    queryKey: ['intervention-options'],
+    queryFn: getInterventionOptions,
+    staleTime: Infinity, // fixed lists
+  });
+
+export const useInterventions = (studentId, classId, trashed) =>
+  useQuery({
+    queryKey: ['interventions', studentId, classId || '', !!trashed],
+    queryFn: () => listInterventions({ studentId, classId, trashed }),
+    enabled: !!studentId,
+  });
+
+export const useIntervention = (id) =>
+  useQuery({
+    queryKey: ['intervention', String(id)],
+    queryFn: () => getIntervention(id),
+    enabled: !!id,
+  });
+
+export const useDueFollowUps = () =>
+  useQuery({
+    queryKey: ['follow-ups-due'],
+    queryFn: listDueFollowUps,
+  });
+
+// Any change to an intervention affects the student lists, the detail and the due list.
+const REFRESH = ['interventions', 'intervention', 'follow-ups-due'];
+
+function useRefreshingMutation(mutationFn) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => Promise.all(REFRESH.map((k) => qc.invalidateQueries({ queryKey: [k] }))),
+  });
+}
+
+export const useCreateIntervention = () => useRefreshingMutation(createIntervention);
+export const useUpdateIntervention = () => useRefreshingMutation(updateIntervention);
+export const useDeleteIntervention = () => useRefreshingMutation(deleteIntervention);
+export const useRestoreIntervention = () => useRefreshingMutation(restoreIntervention);
+
+export function useAddFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addFollowup,
+    onSuccess: (data, vars) => {
+      qc.setQueryData(['intervention', String(vars.id)], data); // the response is the fresh detail
+      qc.invalidateQueries({ queryKey: ['interventions'] });
+      qc.invalidateQueries({ queryKey: ['follow-ups-due'] });
+    },
+  });
+}
+
+=== src\components\ui\InterventionBadges.jsx
+// Neutral labels only. These describe the record, never the student.
+
+const STATUS = {
+  planned: 'bg-gray-100 text-gray-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  requires_follow_up: 'bg-amber-100 text-amber-700',
+  completed: 'bg-green-100 text-green-700',
+};
+
+const FOLLOW_UP = {
+  overdue: ['bg-red-100 text-red-700', 'Follow-up overdue'],
+  due_today: ['bg-amber-100 text-amber-700', 'Follow-up due today'],
+  upcoming: ['bg-blue-50 text-blue-700', 'Follow-up upcoming'],
+};
+
+export const ENTRY_LABELS = {
+  followup: 'Follow-up',
+  rescheduled: 'Rescheduled',
+  completed: 'Completed',
+  reopened: 'Reopened',
+};
+
+const base = 'inline-block rounded-full px-2 py-0.5 text-xs font-medium';
+
+export function StatusBadge({ status, label }) {
+  return <span className={`${base} ${STATUS[status] ?? STATUS.planned}`}>{label ?? status}</span>;
+}
+
+/** state: overdue | due_today | upcoming | null (nothing active to follow up) */
+export function FollowUpBadge({ state }) {
+  if (!state || !FOLLOW_UP[state]) return null;
+  const [cls, text] = FOLLOW_UP[state];
+  return <span className={`${base} ${cls}`}>{text}</span>;
+}
+
+=== src\components\ui\InterventionFormModal.jsx
+    import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import Modal from './Modal';
+import FormField, { inputCls } from './FormField';
+import {
+  useCreateIntervention, useUpdateIntervention, useInterventionOptions,
+} from '../../hooks/useInterventions';
+import { applyServerErrors } from '../../utils/formErrors';
+import { todayLocal } from '../../utils/dates';
+
+const schema = z
+  .object({
+    class_assignment_id: z.string().optional(),
+    concern_type: z.string().min(1, 'Choose a concern type'),
+    concern: z.string().trim().min(1, 'Describe the concern').max(2000),
+    intervention_type: z.string().min(1, 'Choose what you did or plan to do'),
+    intervention_date: z.string().min(1, 'Required'),
+    follow_up_date: z.string().optional(),
+    notes: z.string().max(5000).optional(),
+  })
+  .refine((v) => !v.follow_up_date || v.follow_up_date >= v.intervention_date, {
+    path: ['follow_up_date'],
+    message: 'Must be on or after the intervention date',
+  });
+
+const FIELDS = ['class_assignment_id', 'concern_type', 'concern', 'intervention_type', 'intervention_date', 'follow_up_date', 'notes'];
+
+/**
+ * Record (studentId given) or edit (intervention given) an intervention.
+ * classes: the student's classes ({ id, label, subject }); a record may also be general (no class).
+ * initial: optional pre-fill for a new record (e.g. from a monitoring flag). Nothing is saved until the teacher submits.
+ */
+export default function InterventionFormModal({ studentId, classes = [], intervention, initial, onClose, onSaved }) {
+  const isEdit = !!intervention;
+  const { data: options, isError } = useInterventionOptions();
+
+  return (
+    <Modal title={isEdit ? 'Edit intervention' : 'Record intervention'} onClose={onClose} maxWidth="max-w-lg">
+      {isError ? (
+        <p className="py-6 text-center text-sm text-red-600">Could not load the form options.</p>
+      ) : !options ? (
+        <p className="py-6 text-center text-sm text-gray-500">Loading...</p>
+      ) : (
+        <InterventionForm
+          options={options}
+          studentId={studentId}
+          classes={classes}
+          intervention={intervention}
+          initial={initial}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Mounted only after the options exist, so the selects start with the right value.
+function InterventionForm({ options, studentId, classes, intervention, initial, onClose, onSaved }) {
+  const isEdit = !!intervention;
+  const create = useCreateIntervention();
+  const update = useUpdateIntervention();
+  const mutation = isEdit ? update : create;
+
+  const { register, handleSubmit, setError, formState: { errors } } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: isEdit
+      ? {
+          concern_type: intervention.concern_type,
+          concern: intervention.concern ?? '',
+          intervention_type: intervention.intervention_type,
+          intervention_date: intervention.intervention_date,
+          notes: intervention.notes ?? '',
+        }
+      : {
+          class_assignment_id: initial?.class_assignment_id ? String(initial.class_assignment_id) : '',
+          concern_type: initial?.concern_type ?? '',
+          concern: initial?.concern ?? '',
+          intervention_type: '',
+          intervention_date: todayLocal(),
+          follow_up_date: '',
+          notes: '',
+        },
+  });
+
+  const onSubmit = (v) => {
+    const common = {
+      concern_type: v.concern_type,
+      concern: v.concern.trim(),
+      intervention_type: v.intervention_type,
+      intervention_date: v.intervention_date,
+      notes: v.notes?.trim() ? v.notes.trim() : null,
+    };
+
+    mutation.mutate(
+      isEdit
+        ? { id: intervention.id, ...common }
+        : {
+            studentId,
+            class_assignment_id: v.class_assignment_id ? Number(v.class_assignment_id) : null,
+            follow_up_date: v.follow_up_date || null,
+            ...common,
+          },
+      {
+        onSuccess: (result) => {
+          onSaved?.(result);
+          onClose();
+        },
+        onError: (err) => applyServerErrors(err, setError, FIELDS),
+      }
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <p className="rounded-md bg-gray-50 p-3 text-xs text-gray-600">
+        Record only what you need to follow up. This stays private to you and administrators, and nothing
+        here is sent to anyone.
+      </p>
+
+      {!isEdit && (
+        <FormField label="Class" error={errors.class_assignment_id?.message} hint="Leave as General if this is not about one class.">
+          <select className={inputCls} {...register('class_assignment_id')}>
+            <option value="">General (not tied to a class)</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.label} - {c.subject}</option>
+            ))}
+          </select>
+        </FormField>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Concern type" error={errors.concern_type?.message}>
+          <select className={inputCls} {...register('concern_type')}>
+            <option value="">Choose...</option>
+            {options.concern_types.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Intervention" error={errors.intervention_type?.message}>
+          <select className={inputCls} {...register('intervention_type')}>
+            <option value="">Choose...</option>
+            {options.intervention_types.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </FormField>
+      </div>
+
+      <FormField label="Concern" error={errors.concern?.message}>
+        <textarea rows={3} className={inputCls} placeholder="e.g. Repeated missing assignments" {...register('concern')} />
+      </FormField>
+
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Date" error={errors.intervention_date?.message}>
+          <input type="date" className={inputCls} {...register('intervention_date')} />
+        </FormField>
+        {!isEdit && (
+          <FormField label="Follow-up date (optional)" error={errors.follow_up_date?.message}>
+            <input type="date" className={inputCls} {...register('follow_up_date')} />
+          </FormField>
+        )}
+      </div>
+
+      <FormField label="Notes (optional)" error={errors.notes?.message}>
+        <textarea rows={3} className={inputCls} {...register('notes')} />
+      </FormField>
+
+      {isEdit && (
+        <p className="text-xs text-gray-500">
+          To change the follow-up date or the status, record a follow-up from the intervention.
+        </p>
+      )}
+
+      {errors.root && <p className="text-sm text-red-600">{errors.root.message}</p>}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className="rounded-md border px-4 py-2 text-sm">Cancel</button>
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+        >
+          {mutation.isPending ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+=== src\pages\students\StudentProfileModal.jsx
+import { useState } from 'react';
+import Modal from '../../components/ui/Modal';
+import StudentInterventionsTab from '../../components/ui/StudentInterventionsTab';
+import { useStudentProfile } from '../../hooks/useStudentProfile';
+
+// "2013-03-15" -> "Mar 15, 2013" (built from parts so the date never shifts with the timezone)
+const pretty = (ymd) => {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const Row = ({ label, children }) => (
+  <div className="flex gap-3 py-1.5 text-sm">
+    <dt className="w-36 shrink-0 text-gray-500">{label}</dt>
+    <dd className="min-w-0 break-words text-gray-900">
+      {children || <span className="text-gray-400">Not provided</span>}
+    </dd>
+  </div>
+);
+
+const Section = ({ title, children }) => (
+  <section className="mt-5">
+    <h4 className="border-b border-gray-200 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      {title}
+    </h4>
+    {children}
+  </section>
+);
+
+const Stat = ({ label, value }) => (
+  <div className="rounded-md border border-gray-200 px-2 py-1.5 text-center">
+    <p className="text-base font-semibold text-gray-900">{value}</p>
+    <p className="text-xs text-gray-500">{label}</p>
+  </div>
+);
+
+// Notes and Communication tabs are added in the next piece.
+const TABS = [
+  { key: 'details', label: 'Details' },
+  { key: 'interventions', label: 'Interventions' },
+];
+
+export default function StudentProfileModal({ student, onClose, onEdit }) {
+  const { data: p, isLoading, isError, error } = useStudentProfile(student.id);
+  const [tab, setTab] = useState('details');
+
+  return (
+    <Modal title={student.full_name} onClose={onClose} maxWidth="max-w-2xl">
+      {isLoading ? (
+        <p className="py-8 text-center text-sm text-gray-500">Loadingâ€¦</p>
+      ) : isError ? (
+        <p className="py-8 text-center text-sm text-red-600">
+          {error?.status === 403
+            ? "You don't have access to this student."
+            : error?.message ?? 'Could not load this student.'}
+        </p>
+      ) : !p ? (
+        <p className="py-8 text-center text-sm text-gray-500">Loadingâ€¦</p>
+      ) : (
+        <>
+          <div className="-mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-gray-500">ID {p.student_id}</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {p.status}
+            </span>
+            {p.grade_level && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">{p.grade_level}</span>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-1 border-b border-gray-200" role="tablist">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.key}
+                onClick={() => setTab(t.key)}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+                  tab === t.key
+                    ? 'border-blue-600 text-blue-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'details' && (
+            <>
+              <Section title="Personal">
+                <dl>
+                  <Row label="Full name">{p.full_name}</Row>
+                  <Row label="Sex"><span className="capitalize">{p.sex}</span></Row>
+                  <Row label="Date of birth">
+                    {pretty(p.date_of_birth) && `${pretty(p.date_of_birth)}${p.age != null ? ` (${p.age} years old)` : ''}`}
+                  </Row>
+                  <Row label="Contact number">{p.contact_number}</Row>
+                </dl>
+              </Section>
+
+              <Section title="Parent / guardian">
+                <dl>
+                  <Row label="Name">{p.guardian_name}</Row>
+                  <Row label="Contact number">{p.guardian_contact}</Row>
+                  <Row label="Email">
+                    {p.guardian_email && (
+                      <a href={`mailto:${p.guardian_email}`} className="text-blue-600 hover:underline">
+                        {p.guardian_email}
+                      </a>
+                    )}
+                  </Row>
+                </dl>
+              </Section>
+
+              <Section title="Classes and attendance">
+                {p.classes.length === 0 ? (
+                  <p className="py-3 text-sm text-gray-500">Not enrolled in any of your classes.</p>
+                ) : (
+                  <div className="mt-2 space-y-3">
+                    {p.classes.map((c) => {
+                      const a = c.attendance;
+                      return (
+                        <div key={c.id} className="rounded-lg border border-gray-200 p-3">
+                          <p className="text-sm font-medium text-gray-900">
+                            {c.label} Â· {c.subject}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {c.academic_year}
+                            {c.teacher ? ` Â· Teacher: ${c.teacher}` : ''}
+                          </p>
+
+                          <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                            <Stat label="Present" value={a.present} />
+                            <Stat label="Late" value={a.late} />
+                            <Stat label="Absent" value={a.absent} />
+                            <Stat label="Excused" value={a.excused} />
+                            <Stat label="Rate" value={a.attendance_rate != null ? `${a.attendance_rate}%` : 'â€”'} />
+                            <Stat label="Absent in a row" value={a.consecutive_absences} />
+                          </div>
+
+                          <p className="mt-2 text-xs text-gray-500">
+                            Based on {a.days_counted} recorded {a.days_counted === 1 ? 'day' : 'days'} since{' '}
+                            {pretty(a.period.from)}.
+                          </p>
+
+                          {a.needs_review && (
+                            <div className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+                              <p className="font-medium">{a.label}</p>
+                              <ul className="mt-0.5 list-disc pl-4">
+                                {a.reasons.map((r) => <li key={r}>{r}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+            </>
+          )}
+
+          {tab === 'interventions' && <StudentInterventionsTab studentId={student.id} classes={p.classes} />}
+
+          <div className="mt-6 flex justify-end gap-2">
+            <button onClick={onEdit} className="rounded-md border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">
+              Edit
+            </button>
+            <button onClick={onClose} className="rounded-md border px-4 py-2 text-sm">Close</button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+=== src\App.jsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AuthLayout from './layouts/AuthLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRoute from './routes/ProtectedRoute';
+import Login from './pages/auth/Login';
+import Dashboard from './pages/dashboard/Dashboard';
+import StudentsList from './pages/students/StudentsList'
+import ClassesList from './pages/classes/ClassesList';
+import ClassDetailPage from './pages/classes/ClassDetailPage';
+import AttendancePage from './pages/attendance/AttendancePage';
+import AdminRoute from './routes/AdminRoute';
+import TermsPage from './pages/admin/TermsPage';
+import SetupPage from './pages/admin/SetupPage';
+import AttendanceReportPage from './pages/attendance/AttendanceReportPage';
+import SettingsPage from './pages/settings/SettingsPage'
+import ComingSoon from './pages/ComingSoon'
+import AssignmentsPage from './pages/assignments/AssignmentsPage';
+import MissingWorkPage from './pages/assignments/MissingWorkPage';
+import AssignmentGridPage from './pages/assignments/AssignmentGridPage';
+import InterventionsPage from './pages/interventions/InterventionsPage';
+
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/students" element={<StudentsList />} />
+            <Route path="/classes" element={<ClassesList />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/classes/:id" element={<ClassDetailPage />} />
+            <Route path="/attendance/report" element={<AttendanceReportPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/interventions" element={<InterventionsPage />} />
+            <Route path="/reports" element={<ComingSoon />} />
+            <Route path="/ai" element={<ComingSoon />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/assignments/missing" element={<MissingWorkPage />} />
+            <Route path="/assignments/:id" element={<AssignmentGridPage />} />
+            <Route element={<AdminRoute />}>
+              <Route path="/admin/terms" element={<TermsPage />} />
+              <Route path="/admin/academic-years" element={<SetupPage key="academic-years" path="academic-years" />} />
+              <Route path="/admin/grade-levels" element={<SetupPage key="grade-levels" path="grade-levels" />} />
+              <Route path="/admin/subjects" element={<SetupPage key="subjects" path="subjects" />} />
+            </Route>
+
+          </Route>
+        </Route>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+=== src\components\ui\Sidebar.jsx
+import { useContext } from 'react';
+import { NavLink } from 'react-router-dom';
+import { AuthContext } from '../../contexts/AuthContext';
+
+const teacherNavItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )},
+  { to: '/classes', label: 'My Classes', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  )},
+  { to: '/students', label: 'Students', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  )},
+  { to: '/attendance', label: 'Attendance', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  )},
+  { to: '/assignments', label: 'Assignments', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  )},
+  { to: '/interventions', label: 'Interventions', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  )},
+  { to: '/reports', label: 'Reports', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )},
+  { to: '/ai', label: 'AI Assistant', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  )},
+  { to: '/settings', label: 'Settings', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )},
+];
+
+const adminNavItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )},
+  { to: '/reports', label: 'Reports', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )},
+  { to: '/ai', label: 'AI Assistant', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  )},
+  { to: '/settings', label: 'Settings', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )},
+];
+
+const adminItems = [
+  { to: '/admin/academic-years', label: 'Academic Years', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )},
+  { to: '/admin/terms', label: 'Terms', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+  )},
+  { to: '/admin/grade-levels', label: 'Grade Levels', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  )},
+  { to: '/admin/subjects', label: 'Subjects', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  )},
+];
+
+const linkCls = ({ isActive }) =>
+  `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+    isActive
+      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm'
+      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+  }`;
+
+const iconCls = ({ isActive }) =>
+  `flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`;
+
+export default function Sidebar() {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+  const navItems = isAdmin ? adminNavItems : teacherNavItems;
+
+  return (
+    <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white md:block">
+      <div className="flex h-full flex-col">
+        <div className="border-b border-gray-200 p-6">
+          <h1 className="text-xl font-bold text-gray-900">GuroAssist</h1>
+          <p className="mt-1 text-xs text-gray-500">{isAdmin ? 'Admin Portal' : 'Teacher Portal'}</p>
+        </div>
+        
+        <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+          <div>
+            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Main Menu
+            </p>
+            <div className="flex flex-col gap-1">
+              {navItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkCls}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconCls({ isActive })}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div>
+              <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Administration
+              </p>
+              <div className="flex flex-col gap-1">
+                {adminItems.map((item) => (
+                  <NavLink key={item.to} to={item.to} className={linkCls}>
+                    {({ isActive }) => (
+                      <>
+                        <span className={iconCls({ isActive })}>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )}
+        </nav>
+
+        <div className="border-t border-gray-200 p-4">
+          <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+            <p className="text-sm font-medium text-gray-900">Need help?</p>
+            <p className="mt-1 text-xs text-gray-600">Contact support for assistance</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+

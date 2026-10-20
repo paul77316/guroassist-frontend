@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+:root {
+  --color-brand: #1d4ed8;
+}

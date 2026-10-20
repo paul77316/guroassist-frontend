@@ -1,0 +1,45 @@
+import axios from 'axios';
+
+// Sanctum's SPA (cookie) auth requires:
+//  - withCredentials so the browser sends/receives the session + XSRF cookies
+//  - the XSRF-TOKEN cookie value echoed back as the X-XSRF-TOKEN header
+//    (axios does this automatically when xsrfCookieName/xsrfHeaderName are set
+//    and the request is same-origin or the domain is trusted)
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+  headers: {
+    Accept: 'application/json',
+  },
+});
+
+// Laravel returns 401 for unauthenticated requests and 422 for validation
+// errors with a { message, errors } shape. Surface both consistently so
+// components don't each re-implement error parsing.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const { status, data } = error.response;
+      if (status === 401) {
+        // Let AuthContext decide what to do (e.g. redirect to /login)
+        window.dispatchEvent(new CustomEvent('auth:unauthenticated'));
+      }
+      return Promise.reject({
+        status,
+        message: data?.message ?? 'Something went wrong.',
+        errors: data?.errors ?? null,
+      });
+    }
+    return Promise.reject({ status: null, message: 'Network error. Please try again.', errors: null });
+  }
+);
+
+// Must be called once before login/logout so Laravel issues the XSRF cookie.
+export async function ensureCsrfCookie() {
+  await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+}
+
+export default api;

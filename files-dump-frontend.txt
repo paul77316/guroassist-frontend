@@ -1,0 +1,1034 @@
+
+===== src\App.jsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AuthLayout from './layouts/AuthLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRoute from './routes/ProtectedRoute';
+import TeacherRoute from './routes/TeacherRoute';
+import AdminRoute from './routes/AdminRoute';
+import Login from './pages/auth/Login';
+import Dashboard from './pages/dashboard/Dashboard';
+import StudentsList from './pages/students/StudentsList'
+import ClassesList from './pages/classes/ClassesList';
+import ClassDetailPage from './pages/classes/ClassDetailPage';
+import AttendancePage from './pages/attendance/AttendancePage';
+import TermsPage from './pages/admin/TermsPage';
+import SetupPage from './pages/admin/SetupPage';
+import AttendanceReportPage from './pages/attendance/AttendanceReportPage';
+import SettingsPage from './pages/settings/SettingsPage'
+import ComingSoon from './pages/ComingSoon'
+import AssignmentsPage from './pages/assignments/AssignmentsPage';
+import MissingWorkPage from './pages/assignments/MissingWorkPage';
+import AssignmentGridPage from './pages/assignments/AssignmentGridPage';
+import InterventionsPage from './pages/interventions/InterventionsPage';
+
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+        </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/students" element={<StudentsList />} />
+            <Route path="/classes" element={<ClassesList />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/classes/:id" element={<ClassDetailPage />} />
+            <Route path="/attendance/report" element={<AttendanceReportPage />} />
+            <Route path="/interventions" element={<InterventionsPage />} />
+            <Route path="/reports" element={<ComingSoon />} />
+            <Route path="/ai" element={<ComingSoon />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/assignments/missing" element={<MissingWorkPage />} />
+            <Route path="/assignments/:id" element={<AssignmentGridPage />} />
+            <Route element={<TeacherRoute />}>
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+            <Route element={<AdminRoute />}>
+              <Route path="/admin/terms" element={<TermsPage />} />
+              <Route path="/admin/academic-years" element={<SetupPage key="academic-years" path="academic-years" />} />
+              <Route path="/admin/grade-levels" element={<SetupPage key="grade-levels" path="grade-levels" />} />
+              <Route path="/admin/subjects" element={<SetupPage key="subjects" path="subjects" />} />
+            </Route>
+
+          </Route>
+        </Route>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+===== package.json
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@tanstack/react-query": "^5.102.8",
+    "axios": "^1.20.0",
+    "lottie-react": "^3.1.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-hook-form": "^7.88.0",
+    "react-router-dom": "^7.18.3",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.5.6",
+    "oxlint": "^1.81.0",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0"
+  }
+}
+===== src\services\api.js
+import axios from 'axios';
+
+// Sanctum's SPA (cookie) auth requires:
+//  - withCredentials so the browser sends/receives the session + XSRF cookies
+//  - the XSRF-TOKEN cookie value echoed back as the X-XSRF-TOKEN header
+//    (axios does this automatically when xsrfCookieName/xsrfHeaderName are set
+//    and the request is same-origin or the domain is trusted)
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+  headers: {
+    Accept: 'application/json',
+  },
+});
+
+// Laravel returns 401 for unauthenticated requests and 422 for validation
+// errors with a { message, errors } shape. Surface both consistently so
+// components don't each re-implement error parsing.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const { status, data } = error.response;
+      if (status === 401) {
+        // Let AuthContext decide what to do (e.g. redirect to /login)
+        window.dispatchEvent(new CustomEvent('auth:unauthenticated'));
+      }
+      return Promise.reject({
+        status,
+        message: data?.message ?? 'Something went wrong.',
+        errors: data?.errors ?? null,
+      });
+    }
+    return Promise.reject({ status: null, message: 'Network error. Please try again.', errors: null });
+  }
+);
+
+// Must be called once before login/logout so Laravel issues the XSRF cookie.
+export async function ensureCsrfCookie() {
+  await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+}
+
+export default api;
+===== src\components\ui\Modal.jsx
+export default function Modal({ title, onClose, children, maxWidth = 'max-w-md' }) {
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+			<div className={`max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-lg bg-white p-6 shadow-xl`}>
+				<div className="mb-4 flex items-center justify-between">
+					<h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+					<button
+						onClick={onClose}
+						className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+						aria-label="Close"
+					>
+						✕
+					</button>
+				</div>
+				{children}
+			</div>
+		</div>
+	);
+}
+===== src\components\ui\FormField.jsx
+export default function FormField({ label, error, children, hint }) {
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+      {children}
+      {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+export const inputCls = 'w-full rounded-md border border-gray-300 px-3 py-2 text-sm';
+===== src\pages\interventions\InterventionsPage.jsx
+import { useEffect, useState } from 'react';
+import { StatusBadge, FollowUpBadge } from '../../components/ui/InterventionBadges';
+import InterventionDetailModal from '../../components/ui/InterventionDetailModal';
+import InterventionFormModal from '../../components/ui/InterventionFormModal';
+import { useClasses } from '../../hooks/useClasses';
+import {
+  useStudentsToReview, useAllInterventions, useInterventionOptions,
+} from '../../hooks/useInterventions';
+import { firstError } from '../../utils/errors';
+import { prettyDate } from '../../utils/dates';
+import DueFollowUpsSection from './DueFollowUpsSection';
+import CommunicationDetailModal from '../../components/ui/CommunicationDetailModal';
+import ReviewPromptsSection from './ReviewPromptsSection';
+const selectCls = 'rounded-md border border-gray-300 px-3 py-2 text-sm';
+const classText = (c) => `${c.label}${c.subject ? ` (${c.subject})` : ''}`;
+
+const TABS = [
+  { key: 'todo', label: 'To do' },
+  { key: 'all', label: 'All interventions' },
+];
+
+/**
+ * To do: students who match a review prompt, and follow-ups that are due.
+ * All interventions: the teacher's interventions across students, e.g. the completed ones.
+ */
+export default function InterventionsPage() {
+  const [tab, setTab] = useState('todo');
+  const [openId, setOpenId] = useState(null);
+  const [openCommunicationId, setOpenCommunicationId] = useState(null);
+  const [starting, setStarting] = useState(null); // { studentId, classes, initial }
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-gray-900">Interventions</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        These are reminders and records for you, not conclusions about a student. Nothing is recorded until you start an
+        intervention and save it.
+      </p>
+
+      <div className="mt-4 flex gap-1 border-b border-gray-200" role="tablist">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+              tab === t.key ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'todo' ? (
+        <>
+          <ReviewPromptsSection onStart={setStarting} />
+          <DueFollowUpsSection onOpenIntervention={setOpenId} onOpenCommunication={setOpenCommunicationId} />
+        </>
+      ) : (
+        <AllSection onOpen={setOpenId} />
+      )}
+
+      {openId && <InterventionDetailModal id={openId} onClose={() => setOpenId(null)} />}
+      {openCommunicationId && (
+        <CommunicationDetailModal id={openCommunicationId} onClose={() => setOpenCommunicationId(null)} />
+      )}
+      {starting && (
+        <InterventionFormModal
+          studentId={starting.studentId}
+          classes={starting.classes}
+          initial={starting.initial}
+          onClose={() => setStarting(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ReviewSection({ onStart }) {
+  const { data, isLoading, isError, error } = useStudentsToReview();
+  const [type, setType] = useState('');
+  const [classId, setClassId] = useState('');
+  const [hideActive, setHideActive] = useState(false);
+
+  const classes = data?.meta?.classes ?? [];
+
+  // Filters apply to the prompts shown; a student appears only if at least one prompt matches.
+  const rows = (data?.data ?? [])
+    .map((s) => ({
+      ...s,
+      shown: s.flags.filter((f) => (!type || f.type === type) && (!classId || String(f.class.id) === classId)),
+    }))
+    .filter((s) => s.shown.length > 0 && (!hideActive || s.intervention.active_count === 0));
+
+  const start = (s) => {
+    const flag = s.shown[0];
+    onStart({
+      studentId: s.student_id,
+      classes: s.classes,
+      initial: {
+        class_assignment_id: flag.class.id,
+        concern_type: flag.type,
+        concern: flag.reasons.join(' '),
+      },
+    });
+  };
+
+  return (
+    <section className="mt-6">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Students to review</h3>
+
+      {isLoading ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : isError ? (
+        <p className="mt-4 text-sm text-red-600">{firstError(error, 'Could not load the review list.')}</p>
+      ) : !data ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : classes.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+          You don't have any classes yet. Add one on the Classes page first.
+        </p>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-wrap items-end gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Prompt</label>
+              <select value={type} onChange={(e) => setType(e.target.value)} className={selectCls}>
+                <option value="">All prompts</option>
+                <option value="attendance_concern">Attendance concern</option>
+                <option value="missing_work">Missing work</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Class</label>
+              <select value={classId} onChange={(e) => setClassId(e.target.value)} className={selectCls}>
+                <option value="">All classes</option>
+                {classes.map((c) => <option key={c.id} value={c.id}>{classText(c)}</option>)}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
+              <input type="checkbox" checked={hideActive} onChange={(e) => setHideActive(e.target.checked)} />
+              Hide students with an active intervention
+            </label>
+          </div>
+
+          {rows.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+              {data.data.length === 0
+                ? 'No students match a review prompt right now.'
+                : 'No students match these filters.'}
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                  <tr>
+                    <th className="px-4 py-2">Student</th>
+                    <th className="px-4 py-2">Review prompts</th>
+                    <th className="px-4 py-2">Intervention</th>
+                    <th className="px-4 py-2" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {rows.map((s) => (
+                    <tr key={s.student_id}>
+                      <td className="whitespace-nowrap px-4 py-2 align-top">
+                        <p className="font-medium text-gray-900">{s.full_name}</p>
+                        <p className="text-xs text-gray-400">{s.student_number}</p>
+                      </td>
+                      <td className="px-4 py-2 align-top">
+                        <ul className="space-y-2">
+                          {s.shown.map((f, i) => (
+                            <li key={`${f.type}-${f.class.id}-${i}`}>
+                              <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                {f.label}
+                              </span>{' '}
+                              <span className="text-xs text-gray-500">{classText(f.class)}</span>
+                              <ul className="mt-0.5 space-y-0.5 text-xs text-gray-500">
+                                {f.reasons.map((r) => <li key={r}>{r}</li>)}
+                              </ul>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="px-4 py-2 align-top">
+                        {s.intervention.active_count > 0 ? (
+                          <div className="space-y-1">
+                            <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                              Intervention active
+                            </span>
+                            {s.intervention.follow_up_due && (
+                              <span className="block text-xs text-amber-700">Follow-up due</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-right align-top">
+                        <button
+                          onClick={() => start(s)}
+                          className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                        >
+                          Start intervention
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="mt-2 text-xs text-gray-500">
+            Attendance is looked at over the last 30 days. Start intervention opens the
+            form with the concern filled in; you can change it before saving.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function DueSection({ onOpen }) {
+  const { data, isLoading, isError, error } = useDueFollowUps();
+  const rows = data?.data ?? [];
+
+  return (
+    <section className="mt-10">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Follow-ups due</h3>
+
+      {isLoading ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : isError ? (
+        <p className="mt-4 text-sm text-red-600">{firstError(error, 'Could not load your follow-ups.')}</p>
+      ) : !data ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : rows.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+          No follow-ups are due. You are up to date.
+        </p>
+      ) : (
+        <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th className="px-4 py-2">Student</th>
+                <th className="px-4 py-2">Class</th>
+                <th className="px-4 py-2">Concern</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Follow-up</th>
+                <th className="px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((r) => (
+                <tr key={r.id} className={r.follow_up_state === 'overdue' ? 'bg-amber-50/50' : ''}>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <p className="font-medium text-gray-900">{r.student.full_name}</p>
+                    <p className="text-xs text-gray-400">{r.student.student_number}</p>
+                  </td>
+                  <td className="px-4 py-2 text-gray-600">{r.class ? classText(r.class) : 'General'}</td>
+                  <td className="px-4 py-2 text-gray-600">{r.concern_type_label}</td>
+                  <td className="px-4 py-2"><StatusBadge status={r.status} label={r.status_label} /></td>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <FollowUpBadge state={r.follow_up_state} />
+                    <span className="block text-xs text-gray-500">{prettyDate(r.follow_up_date)}</span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button
+                      onClick={() => onOpen(r.id)}
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      Open
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="mt-2 text-xs text-gray-500">
+        A follow-up stays here until you complete the intervention or move its follow-up date.
+        Interventions in an archived class are not shown.
+      </p>
+    </section>
+  );
+}
+
+/** Every intervention the teacher wrote, across students, with filters. Opens the same detail window. */
+function AllSection({ onOpen }) {
+  const { data: classes = [] } = useClasses();
+  const { data: options } = useInterventionOptions();
+
+  const [status, setStatus] = useState('completed'); // the common question: what has been completed?
+  const [classId, setClassId] = useState('');
+  const [type, setType] = useState('');
+  const [search, setSearch] = useState('');
+  const [debounced, setDebounced] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Wait for a pause in typing before asking the server, and go back to page 1 for any new filter.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebounced(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const change = (setter) => (e) => {
+    setter(e.target.value);
+    setPage(1);
+  };
+
+  const { data, isLoading, isError, error, isFetching } = useAllInterventions({
+    status: status || undefined,
+    class_assignment_id: classId || undefined,
+    concern_type: type || undefined,
+    search: debounced || undefined,
+    page,
+  });
+
+  const rows = data?.data ?? [];
+  const meta = data?.meta;
+
+  const statusOptions = [
+    { value: '', label: 'All statuses' },
+    { value: 'active', label: 'Active (not completed)' },
+    ...(options?.statuses ?? []),
+  ];
+
+  return (
+    <section className="mt-6">
+      <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Status</label>
+          <select value={status} onChange={change(setStatus)} className={selectCls}>
+            {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Class</label>
+          <select value={classId} onChange={change(setClassId)} className={selectCls}>
+            <option value="">All classes</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.grade_level} - {c.section} ({c.subject})</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Concern type</label>
+          <select value={type} onChange={change(setType)} className={selectCls}>
+            <option value="">All types</option>
+            {(options?.concern_types ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-600">Student</label>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name or student ID"
+            className={selectCls}
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : isError ? (
+        <p className="mt-4 text-sm text-red-600">{firstError(error, 'Could not load interventions.')}</p>
+      ) : !data ? (
+        <p className="mt-4 text-sm text-gray-500">Loading...</p>
+      ) : rows.length === 0 ? (
+        <p className="mt-4 rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+          No interventions match these filters.
+        </p>
+      ) : (
+        <>
+          <p className="mt-4 text-sm text-gray-600">
+            {meta?.total ?? rows.length} {(meta?.total ?? rows.length) === 1 ? 'intervention' : 'interventions'}
+            {isFetching ? ' - updating...' : ''}
+          </p>
+
+          <div className="mt-2 overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-2">Student</th>
+                  <th className="px-4 py-2">Class</th>
+                  <th className="px-4 py-2">Concern</th>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <p className="font-medium text-gray-900">{r.student.full_name}</p>
+                      <p className="text-xs text-gray-400">{r.student.student_number}</p>
+                    </td>
+                    <td className="px-4 py-2 text-gray-600">{r.class ? classText(r.class) : 'General'}</td>
+                    <td className="px-4 py-2 text-gray-600">
+                      {r.concern_type_label}
+                      <span className="block text-xs text-gray-400">{r.intervention_type_label}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2 text-gray-600">{prettyDate(r.intervention_date)}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StatusBadge status={r.status} label={r.status_label} />
+                        <FollowUpBadge state={r.follow_up_state} />
+                      </div>
+                      {r.status === 'completed' && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          {r.completed_on ? `Completed ${prettyDate(r.completed_on)}` : 'Completed'}
+                          {r.outcome_label ? ` - ${r.outcome_label}` : ''}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => onOpen(r.id)}
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                      >
+                        Open
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {meta && meta.last_page > 1 && (
+            <div className="mt-3 flex items-center justify-end gap-3 text-sm text-gray-600">
+              <span>Page {meta.current_page} of {meta.last_page}</span>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={meta.current_page <= 1}
+                className="rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+                disabled={meta.current_page >= meta.last_page}
+                className="rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      <p className="mt-3 text-xs text-gray-500">
+        Only interventions you recorded are listed, for students who are still in your classes. Open one to see the
+        details and history, or to reopen a completed one. Interventions in an archived class are not shown.
+      </p>
+    </section>
+  );
+}
+===== layout and navigation files
+import { useContext } from 'react';
+import { NavLink } from 'react-router-dom';
+import { AuthContext } from '../../contexts/AuthContext';
+
+const teacherNavItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )},
+  { to: '/classes', label: 'My Classes', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  )},
+  { to: '/students', label: 'Students', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  )},
+  { to: '/attendance', label: 'Attendance', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  )},
+  { to: '/assignments', label: 'Activities', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  )},
+  { to: '/interventions', label: 'Interventions', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  )},
+  { to: '/reports', label: 'Reports', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )},
+  { to: '/ai', label: 'AI Assistant', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  )},
+  { to: '/settings', label: 'Settings', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )},
+];
+
+const adminNavItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )},
+  { to: '/reports', label: 'Reports', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )},
+  { to: '/ai', label: 'AI Assistant', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+    </svg>
+  )},
+];
+
+const adminItems = [
+  { to: '/admin/academic-years', label: 'Academic Years', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )},
+  { to: '/admin/terms', label: 'Terms', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+  )},
+  { to: '/admin/grade-levels', label: 'Grade Levels', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  )},
+  { to: '/admin/subjects', label: 'Subjects', icon: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  )},
+];
+
+const linkCls = ({ isActive }) =>
+  `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+    isActive
+      ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-sm'
+      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+  }`;
+
+const iconCls = ({ isActive }) =>
+  `flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`;
+
+export default function Sidebar() {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+  const navItems = isAdmin ? adminNavItems : teacherNavItems;
+
+  return (
+    <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white md:block">
+      <div className="flex h-full flex-col">
+        <div className="border-b border-gray-200 p-6">
+          <h1 className="text-xl font-bold text-gray-900">GuroAssist</h1>
+          <p className="mt-1 text-xs text-gray-500">{isAdmin ? 'Admin Portal' : 'Teacher Portal'}</p>
+        </div>
+        
+        <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+          <div>
+            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              Main Menu
+            </p>
+            <div className="flex flex-col gap-1">
+              {navItems.map((item) => (
+                <NavLink key={item.to} to={item.to} className={linkCls}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconCls({ isActive })}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div>
+              <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Administration
+              </p>
+              <div className="flex flex-col gap-1">
+                {adminItems.map((item) => (
+                  <NavLink key={item.to} to={item.to} className={linkCls}>
+                    {({ isActive }) => (
+                      <>
+                        <span className={iconCls({ isActive })}>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          )}
+        </nav>
+
+        <div className="border-t border-gray-200 p-4">
+          <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+            <p className="text-sm font-medium text-gray-900">Need help?</p>
+            <p className="mt-1 text-xs text-gray-600">Contact support for assistance</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+import { Outlet } from 'react-router-dom';
+import logo from '../assets/logo.jpg';
+
+export default function AuthLayout() {
+  return (
+    <div className="flex min-h-screen">
+      {/* Left Column - Minimalist Design */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-b from-blue-900 to-slate-900 relative">
+        {/* Subtle Blue Accent */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl" />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center h-full px-16 text-white">
+
+          {/* Brand */}
+          <h1 className="text-4xl font-bold mb-3 mt-6">
+            <span className="text-white">Guro</span><span className="text-blue-400">Assist</span>
+          </h1>
+          <p className="text-lg text-blue-200/70 mb-8">
+            Teacher Assistant System
+          </p>
+
+          {/* Simple Divider */}
+          <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 mb-8" />
+
+          {/* Description */}
+          <p className="text-blue-100/80 mb-12 max-w-md leading-relaxed">
+            A comprehensive platform for teachers to track attendance, manage student interventions, and monitor academic progress.
+          </p>
+
+          {/* Simple Stats */}
+          <div className="grid grid-cols-3 gap-6 mb-12">
+            <div className="border border-blue-500/20 rounded-lg p-4 bg-blue-500/5">
+              <p className="text-2xl font-bold text-blue-400">Track</p>
+              <p className="text-sm text-blue-200/60">Attendance</p>
+            </div>
+            <div className="border border-blue-500/20 rounded-lg p-4 bg-blue-500/5">
+              <p className="text-2xl font-bold text-blue-400">Manage</p>
+              <p className="text-sm text-blue-200/60">Interventions</p>
+            </div>
+            <div className="border border-blue-500/20 rounded-lg p-4 bg-blue-500/5">
+              <p className="text-2xl font-bold text-blue-400">Monitor</p>
+              <p className="text-sm text-blue-200/60">Progress</p>
+            </div>
+          </div>
+
+          {/* Powered By */}
+          <div className="mt-auto mb-6 text-md">
+            <p className="text-sm text-blue-300/50">© 2026 GuroAssist</p>
+            <p className="text-sm text-blue-400 mt-1 font-medium">Powered by RPGSolution</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column - Login Form */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden mb-8 text-center">
+            <img
+              src={logo}
+              alt="GuroAssist Logo"
+              className="mx-auto mb-4 h-16 w-auto object-contain"
+            />
+            <h1 className="text-2xl font-bold text-gray-900">GuroAssist</h1>
+            <p className="mt-1 text-sm text-gray-600">Teacher Assistant System</p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
+            <Outlet />
+          </div>
+
+          <div className="lg:hidden mt-6 text-center">
+            <p className="text-xs text-gray-500">© 2024 GuroAssist</p>
+            <p className="text-xs text-gray-400 mt-1">Powered by RPGSolution</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+import { Outlet } from 'react-router-dom';
+import Sidebar from '../components/ui/Sidebar';
+import Topbar from '../components/ui/Topbar';
+
+export default function DashboardLayout() {
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <Topbar />
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
+===== class related services and hooks
+import api from './api';
+
+export const getClasses = () => api.get('/class-assignments').then((r) => r.data.data);
+export const createClass = (payload) => api.post('/class-assignments', payload).then((r) => r.data.data);
+export const updateClass = ({ id, ...payload }) => api.put(`/class-assignments/${id}`, payload).then((r) => r.data.data);
+export const archiveClass = (id) => api.delete(`/class-assignments/${id}`);
+export const getClassStudents = (id) =>
+  api.get(`/class-assignments/${id}/students`).then((r) => r.data.data);
+export const getCandidates = (id, search) =>
+  api.get(`/class-assignments/${id}/student-candidates`, { params: search ? { search } : {} }).then((r) => r.data.data);
+export const enrollStudents = (id, payload) =>
+  api.post(`/class-assignments/${id}/students`, payload).then((r) => r.data); // { data: roster, added }
+export const removeStudent = (id, studentId) =>
+  api.delete(`/class-assignments/${id}/students/${studentId}`);
+export const importStudents = (id, file, confirm) => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('confirm', confirm ? '1' : '0');
+  return api.post(`/class-assignments/${id}/students/import`, form).then((r) => r.data.data);
+};
+export const downloadRoster = (id) =>
+  api.get(`/class-assignments/${id}/students/export`, { responseType: 'blob' }).then((r) => r.data);
+export const downloadImportTemplate = () =>
+  api.get('/templates/student-import', { responseType: 'blob' }).then((r) => r.data);
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getClasses, createClass, updateClass, archiveClass } from '../services/classService';
+
+export function useClasses() {
+  return useQuery({
+    queryKey: ['classes'],
+    queryFn: getClasses,
+  });
+}
+
+function useClassMutation(fn) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['classes'] });
+      qc.invalidateQueries({ queryKey: ['sections'] }); // student form dropdown
+    },
+  });
+}
+
+export const useCreateClass = () => useClassMutation(createClass);
+export const useUpdateClass = () => useClassMutation(updateClass);
+export const useArchiveClass = () => useClassMutation(archiveClass);
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getClassStudents,
+  getCandidates,
+  enrollStudents,
+  removeStudent,
+  importStudents,
+} from '../services/classService';
+
+export const useClassStudents = (classId) =>
+  useQuery({
+    queryKey: ['class-students', classId],
+    queryFn: () => getClassStudents(classId),
+    enabled: !!classId,
+  });
+
+export const useCandidates = (classId, search) =>
+  useQuery({
+    queryKey: ['class-candidates', classId, search],
+    queryFn: () => getCandidates(classId, search),
+    enabled: !!classId,
+  });
+
+// A roster change affects the roster, add-candidates, class cards, students list and attendance grid.
+const ROSTER_KEYS = ['class-students', 'class-candidates', 'classes', 'students', 'attendance'];
+
+function useRosterMutation(mutationFn) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => ROSTER_KEYS.forEach((k) => qc.invalidateQueries({ queryKey: [k] })),
+  });
+}
+
+export const useEnrollStudents = (classId) => useRosterMutation((payload) => enrollStudents(classId, payload));
+export const useRemoveStudent = (classId) => useRosterMutation((studentId) => removeStudent(classId, studentId));
+
+export function useImportStudents(classId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ file, confirm }) => importStudents(classId, file, confirm),
+    onSuccess: (_data, vars) => {
+      if (!vars.confirm) return; // a preview changes nothing
+      ROSTER_KEYS.forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+    },
+  });
+}
+import { useSearchParams } from 'react-router-dom';
+import { useClasses } from './useClasses';
+
+/** The class picked on the assignment pages, kept in the URL (?class=ID) so tabs and links share it. */
+export function useSelectedClass() {
+  const { data: classes = [], isLoading } = useClasses();
+  const [params, setParams] = useSearchParams();
+
+  const requested = params.get('class');
+  const valid = classes.some((c) => String(c.id) === requested);
+  const classId = valid ? requested : classes[0] ? String(classes[0].id) : '';
+
+  return {
+    classes,
+    isLoading,
+    classId,
+    cls: classes.find((c) => String(c.id) === classId),
+    setClassId: (id) => setParams({ class: String(id) }, { replace: true }),
+  };
+}
+===== file lists
