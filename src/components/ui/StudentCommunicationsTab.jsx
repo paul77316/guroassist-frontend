@@ -6,6 +6,8 @@ import { useParentCommunications, useRestoreCommunication } from '../../hooks/us
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 /**
  * A student's logged contact with parents or guardians inside the Student View window.
  * classes: the student's classes from the profile ({ id, label, subject }).
@@ -60,7 +62,7 @@ export default function StudentCommunicationsTab({ studentId, classes = [] }) {
                   <p className="text-sm font-medium text-gray-900">{r.method_label}</p>
                   <p className="text-xs text-gray-500">
                     {prettyDate(r.contact_date)}
-                    {r.class ? ` - ${r.class.label}${r.class.subject ? ` (${r.class.subject})` : ''}` : ' - General'}
+                    {r.class ? ` - ${classText(r.class)}` : ' - General'}
                     {r.author ? ` - by ${r.author}` : ''}
                   </p>
                   {r.follow_up_date && (

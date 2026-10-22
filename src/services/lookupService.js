@@ -1,6 +1,22 @@
 import api from './api';
 
-export const getGradeLevels = () => api.get('/grade-levels').then((r) => r.data.data);
-export const getSubjects = () => api.get('/subjects').then((r) => r.data.data);
-export const getAcademicYears = () => api.get('/academic-years').then((r) => r.data.data);
-export const getTerms = () => api.get('/terms').then((r) => r.data.data);
+const getLookupItems = async (endpoint) => {
+  const response = await api.get(endpoint);
+  let items = response.data?.data ?? response.data;
+
+  // Some API responses wrap the Laravel `data` payload one extra time.
+  if (!Array.isArray(items) && Array.isArray(items?.data)) {
+    items = items.data;
+  }
+
+  if (!Array.isArray(items)) {
+    throw new Error(`Expected an array from ${endpoint}, received ${items === null ? 'null' : typeof items}.`);
+  }
+
+  return items;
+};
+
+export const getGradeLevels = () => getLookupItems('/grade-levels');
+export const getSubjects = () => getLookupItems('/subjects');
+export const getAcademicYears = () => getLookupItems('/academic-years');
+export const getTerms = () => getLookupItems('/terms');

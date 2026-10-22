@@ -30,9 +30,9 @@ export default function ClassFormModal({ open, onClose, classItem }) {
   const isEdit = !!classItem;
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const { data: grades = [], isLoading: gl } = useGradeLevels();
-  const { data: subjects = [], isLoading: sl } = useSubjects();
-  const { data: years = [], isLoading: yl } = useAcademicYears();
+  const { data: grades = [], isLoading: gl, isError: gradesFailed, error: gradesError } = useGradeLevels();
+  const { data: subjects = [], isLoading: sl, isError: subjectsFailed, error: subjectsError } = useSubjects();
+  const { data: years = [], isLoading: yl, isError: yearsFailed, error: yearsError } = useAcademicYears();
   const create = useCreateClass();
   const update = useUpdateClass();
   const mutation = isEdit ? update : create;
@@ -103,7 +103,8 @@ export default function ClassFormModal({ open, onClose, classItem }) {
                   <option value="">Select grade level</option>
                   {grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
-                <Empty show={!gl && grades.length === 0 && !isAdmin}>No grade levels yet. Ask an admin to add them.</Empty>
+                <Empty show={gradesFailed}>Could not load grade levels: {gradesError?.message ?? 'Please try again.'}</Empty>
+                <Empty show={!gl && !gradesFailed && grades.length === 0 && !isAdmin}>No grade levels yet. Ask an admin to add them.</Empty>
                 {addLink('grade-levels', 'grade_level_id')}
               </FormField>
 
@@ -118,7 +119,8 @@ export default function ClassFormModal({ open, onClose, classItem }) {
               <option value="">Select subject</option>
               {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <Empty show={!sl && subjects.length === 0 && !isAdmin}>No subjects yet. Ask an admin to add them.</Empty>
+            <Empty show={subjectsFailed}>Could not load subjects: {subjectsError?.message ?? 'Please try again.'}</Empty>
+            <Empty show={!sl && !subjectsFailed && subjects.length === 0 && !isAdmin}>No subjects yet. Ask an admin to add them.</Empty>
             {!isEdit && addLink('subjects', 'subject_id')}
           </FormField>
 
@@ -128,7 +130,8 @@ export default function ClassFormModal({ open, onClose, classItem }) {
                 <option value="">Select academic year</option>
                 {years.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
               </select>
-              <Empty show={!yl && years.length === 0 && !isAdmin}>No academic years yet. Ask an admin to add one.</Empty>
+              <Empty show={yearsFailed}>Could not load academic years: {yearsError?.message ?? 'Please try again.'}</Empty>
+              <Empty show={!yl && !yearsFailed && years.length === 0 && !isAdmin}>No academic years yet. Ask an admin to add one.</Empty>
               {addLink('academic-years', 'academic_year_id')}
             </FormField>
           )}

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useStudentsToReview } from '../../hooks/useInterventions';
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
+import { classLabel } from '../../utils/classLabel';
 
 const selectCls = 'rounded-md border border-gray-300 px-3 py-2 text-sm';
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
 
 /**
  * Students who match a review prompt. A prompt is handled once the teacher completed an intervention for
@@ -82,7 +82,7 @@ export default function ReviewPromptsSection({ onStart }) {
               <label className="mb-1 block text-xs font-medium text-gray-600">Class</label>
               <select value={classId} onChange={(e) => setClassId(e.target.value)} className={selectCls}>
                 <option value="">All classes</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{classText(c)}</option>)}
+                {classes.map((c) => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
               </select>
             </div>
             <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
@@ -128,7 +128,7 @@ export default function ReviewPromptsSection({ onStart }) {
                               >
                                 {f.label}
                               </span>{' '}
-                              <span className="text-xs text-gray-500">{classText(f.class)}</span>
+                              <span className="text-xs text-gray-500">{classLabel(f.class)}</span>
                               {f.handled && (
                                 <p className="mt-0.5 text-xs text-green-700">
                                   Handled: intervention completed {prettyDate(f.handled.completed_on)}

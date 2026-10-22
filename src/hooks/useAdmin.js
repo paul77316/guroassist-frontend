@@ -42,3 +42,25 @@ function useSetupMutation(path, mutationFn) {
 export const useCreateSetup = (path) => useSetupMutation(path, (p) => svc.createSetup(path, p));
 export const useUpdateSetup = (path) => useSetupMutation(path, (p) => svc.updateSetup(path, p));
 export const useDeleteSetup = (path) => useSetupMutation(path, (id) => svc.deleteSetup(path, id));
+
+const TEACHER_ACCOUNTS = ['admin', 'teachers'];
+
+export const useTeacherAccounts = ({ page = 1, perPage = 20 } = {}) =>
+  useQuery({
+    queryKey: [...TEACHER_ACCOUNTS, { page, perPage }],
+    queryFn: () => svc.listTeacherAccounts({ page, perPage }),
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
+  });
+
+function useTeacherAccountMutation(mutationFn) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: TEACHER_ACCOUNTS }),
+  });
+}
+
+export const useCreateTeacherAccount = () => useTeacherAccountMutation(svc.createTeacherAccount);
+export const useUpdateTeacherAccount = () => useTeacherAccountMutation(svc.updateTeacherAccount);
+export const useResetTeacherPassword = () => useTeacherAccountMutation(svc.resetTeacherPassword);

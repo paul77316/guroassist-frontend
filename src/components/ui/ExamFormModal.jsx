@@ -17,7 +17,10 @@ const schema = z.object({
 
 const FIELDS = ['class_assignment_id', 'title', 'exam_date', 'choice_count'];
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+const classText = (c) => {
+  const name = c.label ?? [c.grade_level, c.section].filter(Boolean).join(' - ');
+  return `${name}${c.subject ? ` (${c.subject})` : ''}`;
+};
 
 /**
  * Create (no exam given) or edit (exam given) an exam. A new exam starts with Set A.
@@ -32,7 +35,7 @@ export default function ExamFormModal({ exam, onClose, onSaved }) {
   const update = useUpdateExam();
   const mutation = isEdit ? update : create;
 
-  const counts = options?.choice_counts ?? [4, 5];
+  const counts = options?.choice_counts ?? [3, 4, 5];
   const locked = isEdit && (exam.question_count ?? 0) > 0;
 
   const { register, handleSubmit, setError, formState: { errors } } = useForm({

@@ -11,12 +11,14 @@ export default defineConfig({
       // so the browser sees everything as same-origin (needed for Sanctum's
       // cookie-based SPA auth to work without extra CORS gymnastics).
       '/api': {
-        target: 'http://guroassist.test',
+        target: 'http://192.168.10.10',
         changeOrigin: true,
+        headers: { host: 'guroassist.test' },
       },
       '/sanctum': {
-        target: 'http://guroassist.test',
+        target: 'http://192.168.10.10',
         changeOrigin: true,
+        headers: { host: 'guroassist.test' },
       },
     },
   },

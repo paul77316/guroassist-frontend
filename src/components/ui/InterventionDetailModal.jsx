@@ -8,6 +8,8 @@ import { useIntervention, useDeleteIntervention } from '../../hooks/useIntervent
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 const Row = ({ label, children }) => (
   <div className="flex gap-3 py-1 text-sm">
     <dt className="w-36 shrink-0 text-gray-500">{label}</dt>
@@ -64,7 +66,7 @@ export default function InterventionDetailModal({ id, onClose }) {
             <Row label="Concern">{i.concern}</Row>
             <Row label="Intervention">{i.intervention_type_label}</Row>
             <Row label="Date">{prettyDate(i.intervention_date)}</Row>
-            <Row label="Class">{i.class ? `${i.class.label} - ${i.class.subject ?? ''}` : 'General (not tied to a class)'}</Row>
+            <Row label="Class">{i.class ? classText(i.class) : 'General (not tied to a class)'}</Row>
             <Row label="Next follow-up">{i.follow_up_date ? prettyDate(i.follow_up_date) : null}</Row>
             {isCompleted && <Row label="Outcome">{i.outcome_label}</Row>}
             <Row label="Notes">{i.notes}</Row>

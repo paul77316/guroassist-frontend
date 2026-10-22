@@ -4,6 +4,7 @@ import ExamFormModal from '../../components/ui/ExamFormModal';
 import CompetenciesModal from '../../components/ui/CompetenciesModal';
 import QuestionFormModal from '../../components/ui/QuestionFormModal';
 import MathText from '../../components/ui/MathText';
+import CompetencyCoverage from '../../components/ui/CompetencyCoverage';
 import {
   useExam, useExamSet, useExamOptions, useDeleteExam, useAddSet, useDeleteSet,
   useDeleteQuestion, useReorderQuestions,
@@ -11,7 +12,10 @@ import {
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+const classText = (c) => {
+  const name = c.label ?? [c.grade_level, c.section].filter(Boolean).join(' - ');
+  return `${name}${c.subject ? ` (${c.subject})` : ''}`;
+};
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** One exam: its sets (A, B, ...) and the questions of the selected set. */
@@ -95,6 +99,12 @@ export default function ExamDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/exams/${exam.id}/print${active ? `?set=${active.id}` : ''}`}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Print
+          </Link>
           <button onClick={() => setManaging(true)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">
             Competencies
           </button>
@@ -156,6 +166,8 @@ export default function ExamDetailPage() {
       ) : (
         <p className="mt-6 text-center text-sm text-gray-500">This exam has no sets.</p>
       )}
+
+      <CompetencyCoverage exam={exam} />
 
       <p className="mt-6 text-xs text-gray-500">
         Each set has its own questions and answer key. Results are grouped by competency across the sets of an exam.

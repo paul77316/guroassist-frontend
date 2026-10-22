@@ -5,6 +5,8 @@ import { useStudentNotes, useRestoreNote } from '../../hooks/useStudentNotes';
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 /**
  * A student's private notes inside the Student View window.
  * classes: the student's classes from the profile ({ id, label, subject }).
@@ -58,7 +60,7 @@ export default function StudentNotesTab({ studentId, classes = [] }) {
                   <p className="break-words text-sm text-gray-900">{r.preview}</p>
                   <p className="mt-1 text-xs text-gray-500">
                     Added {prettyDate(r.date)}
-                    {r.class ? ` - ${r.class.label}${r.class.subject ? ` (${r.class.subject})` : ''}` : ' - General'}
+                    {r.class ? ` - ${classText(r.class)}` : ' - General'}
                     {r.author ? ` - by ${r.author}` : ''}
                   </p>
                 </div>

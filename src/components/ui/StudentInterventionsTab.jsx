@@ -6,6 +6,8 @@ import { useInterventions, useRestoreIntervention } from '../../hooks/useInterve
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 const Count = ({ label, value }) => (
   <div className="rounded-md border border-gray-200 px-2 py-1.5 text-center">
     <p className="text-base font-semibold text-gray-900">{value}</p>
@@ -80,7 +82,7 @@ export default function StudentInterventionsTab({ studentId, classes = [] }) {
                   </p>
                   <p className="text-xs text-gray-500">
                     {prettyDate(r.intervention_date)}
-                    {r.class ? ` - ${r.class.label}${r.class.subject ? ` (${r.class.subject})` : ''}` : ' - General'}
+                    {r.class ? ` - ${classText(r.class)}` : ' - General'}
                     {r.author ? ` - by ${r.author}` : ''}
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

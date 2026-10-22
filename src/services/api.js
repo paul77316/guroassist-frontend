@@ -27,8 +27,12 @@ api.interceptors.response.use(
         // Let AuthContext decide what to do (e.g. redirect to /login)
         window.dispatchEvent(new CustomEvent('auth:unauthenticated'));
       }
+      if (status === 403 && ['password_change_required', 'initial_password_expired'].includes(data?.code)) {
+        window.dispatchEvent(new CustomEvent('auth:initial-password-required', { detail: { code: data.code } }));
+      }
       return Promise.reject({
         status,
+        code: data?.code ?? null,
         message: data?.message ?? 'Something went wrong.',
         errors: data?.errors ?? null,
       });

@@ -8,7 +8,10 @@ import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
 const selectCls = 'rounded-md border border-gray-300 px-3 py-2 text-sm';
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+const classText = (c) => {
+  const name = c.label ?? [c.grade_level, c.section].filter(Boolean).join(' - ');
+  return `${name}${c.subject ? ` (${c.subject})` : ''}`;
+};
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** The teacher's exams. Rows carry counts only; the questions are on the exam page. */
@@ -37,7 +40,7 @@ export default function ExamsPage() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Exams</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Write multiple-choice exams for your classes, with one or more sets. Printing and scanning come in a later step.
+            Write multiple-choice exams for your classes, with one or more sets, and print the paper from the exam page. Scanning comes in a later step.
           </p>
         </div>
         <div className="flex gap-2">

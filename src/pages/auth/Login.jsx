@@ -25,7 +25,11 @@ export default function Login() {
   const onSubmit = async (values) => {
     setServerError(null);
     try {
-      await login(values);
+      const user = await login(values);
+      if (user.must_change_password) {
+        navigate('/initial-password', { replace: true });
+        return;
+      }
       const redirectTo = location.state?.from?.pathname ?? '/dashboard';
       navigate(redirectTo, { replace: true });
     } catch (err) {

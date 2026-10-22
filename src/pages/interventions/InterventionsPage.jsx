@@ -8,11 +8,11 @@ import {
 } from '../../hooks/useInterventions';
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
+import { classLabel } from '../../utils/classLabel';
 import DueFollowUpsSection from './DueFollowUpsSection';
 import CommunicationDetailModal from '../../components/ui/CommunicationDetailModal';
 import ReviewPromptsSection from './ReviewPromptsSection';
 const selectCls = 'rounded-md border border-gray-300 px-3 py-2 text-sm';
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
 
 const TABS = [
   { key: 'todo', label: 'To do' },
@@ -137,7 +137,7 @@ function ReviewSection({ onStart }) {
               <label className="mb-1 block text-xs font-medium text-gray-600">Class</label>
               <select value={classId} onChange={(e) => setClassId(e.target.value)} className={selectCls}>
                 <option value="">All classes</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{classText(c)}</option>)}
+                {classes.map((c) => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
               </select>
             </div>
             <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
@@ -177,7 +177,7 @@ function ReviewSection({ onStart }) {
                               <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                                 {f.label}
                               </span>{' '}
-                              <span className="text-xs text-gray-500">{classText(f.class)}</span>
+                              <span className="text-xs text-gray-500">{classLabel(f.class)}</span>
                               <ul className="mt-0.5 space-y-0.5 text-xs text-gray-500">
                                 {f.reasons.map((r) => <li key={r}>{r}</li>)}
                               </ul>
@@ -262,7 +262,7 @@ function DueSection({ onOpen }) {
                     <p className="font-medium text-gray-900">{r.student.full_name}</p>
                     <p className="text-xs text-gray-400">{r.student.student_number}</p>
                   </td>
-                  <td className="px-4 py-2 text-gray-600">{r.class ? classText(r.class) : 'General'}</td>
+                  <td className="px-4 py-2 text-gray-600">{r.class ? classLabel(r.class) : 'General'}</td>
                   <td className="px-4 py-2 text-gray-600">{r.concern_type_label}</td>
                   <td className="px-4 py-2"><StatusBadge status={r.status} label={r.status_label} /></td>
                   <td className="whitespace-nowrap px-4 py-2">
@@ -349,7 +349,7 @@ function AllSection({ onOpen }) {
           <select value={classId} onChange={change(setClassId)} className={selectCls}>
             <option value="">All classes</option>
             {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.grade_level} - {c.section} ({c.subject})</option>
+              <option key={c.id} value={c.id}>{classLabel(c)}</option>
             ))}
           </select>
         </div>
@@ -408,7 +408,7 @@ function AllSection({ onOpen }) {
                       <p className="font-medium text-gray-900">{r.student.full_name}</p>
                       <p className="text-xs text-gray-400">{r.student.student_number}</p>
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{r.class ? classText(r.class) : 'General'}</td>
+                    <td className="px-4 py-2 text-gray-600">{r.class ? classLabel(r.class) : 'General'}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {r.concern_type_label}
                       <span className="block text-xs text-gray-400">{r.intervention_type_label}</span>

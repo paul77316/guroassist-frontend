@@ -6,6 +6,8 @@ import { useStudentNote, useDeleteNote } from '../../hooks/useStudentNotes';
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 const Row = ({ label, children }) => (
   <div className="flex gap-3 py-1 text-sm">
     <dt className="w-28 shrink-0 text-gray-500">{label}</dt>
@@ -50,7 +52,7 @@ export default function NoteDetailModal({ id, onClose }) {
           <dl>
             <Row label="Added">{prettyDate(n.date)}</Row>
             <Row label="Class">
-              {n.class ? `${n.class.label}${n.class.subject ? ` - ${n.class.subject}` : ''}` : 'General (not tied to a class)'}
+              {n.class ? classText(n.class) : 'General (not tied to a class)'}
             </Row>
             {n.author && <Row label="Written by">{n.author}</Row>}
           </dl>

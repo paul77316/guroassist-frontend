@@ -3,8 +3,8 @@ import { FollowUpActions } from '../../components/ui/CommunicationFollowUp';
 import { useDueFollowUps } from '../../hooks/useInterventions';
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
+import { classLabel } from '../../utils/classLabel';
 
-const classText = (c) => `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
 
 /**
  * Follow-ups that are due: interventions and parent-contact follow-ups in one list.
@@ -51,7 +51,7 @@ export default function DueFollowUpsSection({ onOpenIntervention, onOpenCommunic
                       <p className="font-medium text-gray-900">{r.student.full_name}</p>
                       <p className="text-xs text-gray-400">{r.student.student_number}</p>
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{r.class ? classText(r.class) : 'General'}</td>
+                    <td className="px-4 py-2 text-gray-600">{r.class ? classLabel(r.class) : 'General'}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {isContact ? (
                         <>

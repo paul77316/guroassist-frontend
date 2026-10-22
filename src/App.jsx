@@ -5,6 +5,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import TeacherRoute from './routes/TeacherRoute';
 import AdminRoute from './routes/AdminRoute';
 import Login from './pages/auth/Login';
+import InitialPasswordPage from './pages/auth/InitialPasswordPage';
 import Dashboard from './pages/dashboard/Dashboard';
 import StudentsList from './pages/students/StudentsList'
 import ClassesList from './pages/classes/ClassesList';
@@ -21,6 +22,8 @@ import AssignmentGridPage from './pages/assignments/AssignmentGridPage';
 import InterventionsPage from './pages/interventions/InterventionsPage';
 import ExamsPage from './pages/exams/ExamsPage';
 import ExamDetailPage from './pages/exams/ExamDetailPage';
+import ExamPrintPage from './pages/exams/ExamPrintPage';
+import TeacherAccountsPage from './pages/admin/TeacherAccountsPage';
 
 
 export default function App() {
@@ -29,9 +32,15 @@ export default function App() {
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/initial-password" element={<InitialPasswordPage />} />
+          </Route>
         </Route>
 
         <Route element={<ProtectedRoute />}>
+          <Route element={<TeacherRoute />}>
+            <Route path="/exams/:id/print" element={<ExamPrintPage />} />
+          </Route>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/students" element={<StudentsList />} />
@@ -51,6 +60,7 @@ export default function App() {
               <Route path="/exams/:id" element={<ExamDetailPage />} />
             </Route>
             <Route element={<AdminRoute />}>
+              <Route path="/admin/teachers" element={<TeacherAccountsPage />} />
               <Route path="/admin/terms" element={<TermsPage />} />
               <Route path="/admin/academic-years" element={<SetupPage key="academic-years" path="academic-years" />} />
               <Route path="/admin/grade-levels" element={<SetupPage key="grade-levels" path="grade-levels" />} />

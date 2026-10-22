@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 /**
@@ -7,6 +7,8 @@ import { useAuth } from '../hooks/useAuth';
  */
 export default function ProtectedRoute({ role }) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
+  const isInitialPasswordPage = location.pathname === '/initial-password';
 
   if (isLoading) {
     return (
@@ -18,6 +20,14 @@ export default function ProtectedRoute({ role }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user?.must_change_password && !isInitialPasswordPage) {
+    return <Navigate to="/initial-password" replace />;
+  }
+
+  if (!user?.must_change_password && isInitialPasswordPage) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (role && user?.role !== role) {

@@ -7,6 +7,8 @@ import { useParentCommunication, useDeleteCommunication } from '../../hooks/useP
 import { firstError } from '../../utils/errors';
 import { prettyDate } from '../../utils/dates';
 
+const classText = (c) => c.label ?? `${c.grade_level} - ${c.section}${c.subject ? ` (${c.subject})` : ''}`;
+
 const Row = ({ label, children }) => (
   <div className="flex gap-3 py-1 text-sm">
     <dt className="w-28 shrink-0 text-gray-500">{label}</dt>
@@ -52,7 +54,7 @@ export default function CommunicationDetailModal({ id, onClose }) {
             <Row label="Contact date">{prettyDate(c.contact_date)}</Row>
             <Row label="Method">{c.method_label}</Row>
             <Row label="Class">
-              {c.class ? `${c.class.label}${c.class.subject ? ` - ${c.class.subject}` : ''}` : 'General (not tied to a class)'}
+              {c.class ? classText(c.class) : 'General (not tied to a class)'}
             </Row>
             <Row label="Reason">{c.reason}</Row>
             <Row label="Summary">{c.summary}</Row>
