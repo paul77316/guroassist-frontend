@@ -53,27 +53,27 @@ export default function StudentsList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-gray-900">Students</h2>
         <button
           onClick={() => setEditingStudent({})}
-          className="rounded-md bg-blue-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-800"
+          className="w-full rounded-md bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 sm:w-auto"
         >
           Add Student
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           placeholder="Search by name or student ID…"
-          className="w-64 rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm sm:w-64"
         />
         <select
           value={gradeLevelId}
           onChange={(e) => { setGradeLevelId(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm sm:flex-none"
         >
           <option value="">All grade levels</option>
           {gradeLevels?.map((g) => (
@@ -83,7 +83,7 @@ export default function StudentsList() {
         <select
           value={sectionId}
           onChange={(e) => { setSectionId(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm sm:flex-none"
         >
           <option value="">All sections</option>
           {sections?.map((s) => (
@@ -94,7 +94,7 @@ export default function StudentsList() {
         </select>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-md border border-gray-200">
+      <div className="mt-4 overflow-x-auto rounded-md border border-gray-200">
         {isLoading ? (
           <div className="p-6 text-center text-sm text-gray-500">Loading students…</div>
         ) : isError ? (
@@ -102,7 +102,7 @@ export default function StudentsList() {
         ) : students.length === 0 ? (
           <div className="p-6 text-center text-sm text-gray-500">No students found.</div>
         ) : (
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[760px] w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-2">Student ID</th>

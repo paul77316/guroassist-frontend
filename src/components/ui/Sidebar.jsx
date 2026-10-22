@@ -112,27 +112,53 @@ const linkCls = ({ isActive }) =>
 const iconCls = ({ isActive }) =>
   `flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`;
 
-export default function Sidebar() {
-  const { user } = useContext(AuthContext);
-  const isAdmin = user?.role === 'admin';
+function SidebarContents({ isAdmin, onNavigate, onClose }) {
   const navItems = isAdmin ? adminNavItems : teacherNavItems;
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white md:block">
-      <div className="flex h-full flex-col">
-        <div className="border-b border-gray-200 p-6">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between border-b border-gray-200 p-5 md:p-6">
+        <div>
           <h1 className="text-xl font-bold text-gray-900">GuroAssist</h1>
           <p className="mt-1 text-xs text-gray-500">{isAdmin ? 'Admin Portal' : 'Teacher Portal'}</p>
         </div>
-        
-        <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation menu"
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 md:hidden"
+          >
+            <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-4" aria-label="Main navigation">
+        <div>
+          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Main Menu</p>
+          <div className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <NavLink key={item.to} to={item.to} onClick={onNavigate} className={linkCls}>
+                {({ isActive }) => (
+                  <>
+                    <span className={iconCls({ isActive })}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+
+        {isAdmin && (
           <div>
-            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-              Main Menu
-            </p>
+            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Administration</p>
             <div className="flex flex-col gap-1">
-              {navItems.map((item) => (
-                <NavLink key={item.to} to={item.to} className={linkCls}>
+              {adminItems.map((item) => (
+                <NavLink key={item.to} to={item.to} onClick={onNavigate} className={linkCls}>
                   {({ isActive }) => (
                     <>
                       <span className={iconCls({ isActive })}>{item.icon}</span>
@@ -143,35 +169,48 @@ export default function Sidebar() {
               ))}
             </div>
           </div>
+        )}
+      </nav>
 
-          {isAdmin && (
-            <div>
-              <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                Administration
-              </p>
-              <div className="flex flex-col gap-1">
-                {adminItems.map((item) => (
-                  <NavLink key={item.to} to={item.to} className={linkCls}>
-                    {({ isActive }) => (
-                      <>
-                        <span className={iconCls({ isActive })}>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </>
-                    )}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )}
-        </nav>
-
-        <div className="border-t border-gray-200 p-4">
-          <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-            <p className="text-sm font-medium text-gray-900">Need help?</p>
-            <p className="mt-1 text-xs text-gray-600">Contact support for assistance</p>
-          </div>
+      <div className="border-t border-gray-200 p-4">
+        <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+          <p className="text-sm font-medium text-gray-900">Need help?</p>
+          <p className="mt-1 text-xs text-gray-600">Contact support for assistance</p>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+export default function Sidebar({ mobileOpen, onClose }) {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
+
+  return (
+    <>
+      <aside className="hidden w-64 shrink-0 border-r border-gray-200 bg-white md:block">
+        <SidebarContents isAdmin={isAdmin} />
+      </aside>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+            onClick={onClose}
+            aria-label="Close navigation menu"
+          />
+          <aside
+            id="mobile-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            className="relative z-10 h-full w-72 max-w-[85vw] bg-white shadow-2xl"
+          >
+            <SidebarContents isAdmin={isAdmin} onNavigate={onClose} onClose={onClose} />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

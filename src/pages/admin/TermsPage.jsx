@@ -25,12 +25,12 @@ export default function TermsPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Terms</h1>
           <p className="text-sm text-gray-500">Configure the terms of each academic year.</p>
         </div>
-        <button onClick={() => setForm({})} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white">
+        <button onClick={() => setForm({})} className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm text-white sm:w-auto">
           Add Term
         </button>
       </div>

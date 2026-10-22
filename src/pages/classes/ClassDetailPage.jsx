@@ -118,7 +118,8 @@ export default function ClassDetailPage() {
             No students in this class yet. Use Add students to build the roster.
           </p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[520px] w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-2">Student ID</th>
@@ -144,7 +145,8 @@ export default function ClassDetailPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

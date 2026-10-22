@@ -3,6 +3,7 @@ import { useClasses } from '../../hooks/useClasses';
 import { useAttendance, useSaveAttendance } from '../../hooks/useAttendance';
 import Modal from '../../components/ui/Modal';
 import AttendanceTabs from '../../components/ui/AttendanceTabs';
+import { firstError } from '../../utils/errors';
 
 const STATUSES = [
   { value: 'present', label: 'Present', active: 'bg-green-600 text-white border-green-600' },
@@ -131,12 +132,7 @@ export default function AttendancePage() {
     );
   };
 
-  const serverError = save.isError
-    ? Object.values(save.error?.response?.data?.errors ?? {}).flat()[0] ??
-      save.error?.response?.data?.message ??
-      save.error?.message ??
-      'Failed to save attendance.'
-    : null;
+  const serverError = save.isError ? firstError(save.error, 'Failed to save attendance.') : null;
 
   return (
     <div>

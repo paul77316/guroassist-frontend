@@ -1,5 +1,4 @@
 import { Outlet } from 'react-router-dom';
-import logo from '../assets/logo.jpg';
 
 export default function AuthLayout() {
   return (
@@ -54,19 +53,17 @@ export default function AuthLayout() {
       </div>
 
       {/* Right Column - Login Form */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 px-4 py-12">
+      <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-blue-50 via-white to-slate-50 px-5 py-8 sm:px-8 lg:w-1/2 lg:bg-gray-50 lg:px-4 lg:py-12">
         <div className="w-full max-w-md">
-          <div className="lg:hidden mb-8 text-center">
-            <img
-              src={logo}
-              alt="GuroAssist Logo"
-              className="mx-auto mb-4 h-16 w-auto object-contain"
-            />
-            <h1 className="text-2xl font-bold text-gray-900">GuroAssist</h1>
-            <p className="mt-1 text-sm text-gray-600">Teacher Assistant System</p>
+          <div className="mb-5 rounded-2xl bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-5 text-white shadow-lg shadow-blue-950/15 lg:hidden">
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span>Guro</span><span className="text-blue-400">Assist</span>
+            </h1>
+            <p className="mt-1 text-sm text-blue-100/80">Teacher Assistant System</p>
+            <div className="mt-4 h-0.5 w-10 bg-blue-400" />
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
+          <div className="rounded-3xl border border-white/80 bg-white p-6 shadow-2xl shadow-slate-900/10 sm:p-8 lg:rounded-2xl lg:border-gray-200 lg:shadow-xl">
             <Outlet />
           </div>
 

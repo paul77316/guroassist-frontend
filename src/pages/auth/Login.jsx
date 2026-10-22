@@ -15,6 +15,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -40,7 +41,10 @@ export default function Login() {
 
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-semibold text-gray-900 lg:hidden">Sign in to your account</h2>
+      <div className="mb-7 lg:hidden">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900 lg:hidden">Welcome back</h2>
+        <p className="mt-1 text-sm text-gray-500 lg:hidden">Sign in to continue to your account.</p>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {serverError && (
           <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -57,7 +61,7 @@ export default function Login() {
             type="email"
             autoComplete="username"
             {...register('email')}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base transition-shadow placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 lg:rounded-lg lg:py-2.5 lg:text-sm lg:focus:ring-2 lg:focus:ring-blue-500"
             placeholder="you@school.edu"
           />
           {errors.email && (
@@ -69,14 +73,35 @@ export default function Login() {
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            {...register('password')}
-            className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="••••••••"
-          />
+          <div className="relative mt-1">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              {...register('password')}
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-base transition-shadow placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 lg:rounded-lg lg:py-2.5 lg:text-sm lg:focus:ring-2 lg:focus:ring-blue-500"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex items-center rounded-r-xl px-3 text-gray-500 transition-colors hover:text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 lg:rounded-r-lg"
+            >
+              {showPassword ? (
+                <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.6 4.5 9.5 6-.4.7-1.4 2.1-3 3.4M6.2 6.2C3.9 7.6 2.7 9.6 2.5 11c.9 1.5 4.3 6 9.5 6 1.1 0 2.1-.2 3-.5" />
+                </svg>
+              ) : (
+                <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6z" />
+                  <circle cx="12" cy="12" r="2.5" />
+                </svg>
+              )}
+            </button>
+          </div>
           {errors.password && (
             <p className="mt-1.5 text-xs text-red-600">{errors.password.message}</p>
           )}
@@ -85,7 +110,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 lg:rounded-lg lg:py-2.5 lg:text-sm"
         >
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </button>

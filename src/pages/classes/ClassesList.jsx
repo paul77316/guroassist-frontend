@@ -23,7 +23,7 @@ export default function ClassesList() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">My Classes</h2>
           <p className="mt-1 text-sm text-gray-500">
@@ -32,7 +32,7 @@ export default function ClassesList() {
         </div>
         <button
           onClick={openAdd}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-700 sm:w-auto"
         >
           + Add Class
         </button>

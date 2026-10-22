@@ -17,12 +17,12 @@ export default function TeacherAccountsPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Teacher Accounts</h1>
           <p className="text-sm text-gray-500">Register teacher logins and manage their employee details.</p>
         </div>
-        <button onClick={() => { setEditingTeacher(null); setFormOpen(true); }} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+        <button onClick={() => { setEditingTeacher(null); setFormOpen(true); }} className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-700 sm:w-auto">
           Add Teacher
         </button>
       </div>
