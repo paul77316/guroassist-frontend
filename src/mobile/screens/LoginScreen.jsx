@@ -35,11 +35,6 @@ export default function LoginScreen({ initialEmail = '', notice = null, onSigned
 
   return (
     <main className="mobile-app mobile-page mobile-login-page">
-      <div className="mobile-web-login-brand">
-        <h1><span>Guro</span><span>Assist</span></h1>
-        <p>Teacher Assistant System</p>
-        <div aria-hidden="true" />
-      </div>
       <div className="mobile-login-content">
       {notice && <p role="status" className="mobile-panel border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
 

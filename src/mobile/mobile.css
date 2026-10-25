@@ -32,43 +32,6 @@
   padding: 0;
 }
 
-.mobile-web-login-brand {
-  display: flex;
-  min-height: 28vh;
-  min-height: max(28vh, 12rem);
-  flex-direction: column;
-  justify-content: center;
-  padding: calc(1.5rem + env(safe-area-inset-top)) 1.5rem 1.5rem;
-  border-radius: 0 0 1.5rem 1.5rem;
-  background: linear-gradient(90deg, #1e3a8a, #1e40af);
-  color: #fff;
-  box-shadow: 0 12px 24px rgb(14 30 71 / 14%);
-}
-
-.mobile-web-login-brand h1 {
-  color: #fff;
-  font-size: clamp(2.35rem, 10vw, 3.25rem);
-  font-weight: 800;
-  letter-spacing: -.035em;
-}
-
-.mobile-web-login-brand h1 span + span {
-  color: #60a5fa;
-}
-
-.mobile-web-login-brand p {
-  margin-top: .25rem;
-  color: rgb(219 234 254 / 85%);
-  font-size: .85rem;
-}
-
-.mobile-web-login-brand div {
-  width: 2.5rem;
-  height: 2px;
-  margin-top: 1rem;
-  background: #60a5fa;
-}
-
 .mobile-powered-by {
   color: #8793a7;
   font-size: .72rem;
