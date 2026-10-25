@@ -3,7 +3,7 @@ import SeatChart from '../components/SeatChart';
 import StatusSheet from '../components/StatusSheet';
 import SyncBadge from '../components/SyncBadge';
 import ProblemsPanel from '../components/ProblemsPanel';
-import { markAttendance, readSessionView } from '../lib/attendanceStore';
+import { markAttendance, markManyAttendance, readSessionView } from '../lib/attendanceStore';
 import { syncNow } from '../lib/sync';
 import { SessionChangedError, StudentBlockedError } from '../lib/constants';
 import { notifyOutboxChanged, useOnline, useOutboxSummary, useSyncState } from '../hooks';
@@ -15,6 +15,7 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
   const [picked, setPicked] = useState(null);
   const [highlight, setHighlight] = useState(false);
   const [message, setMessage] = useState(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const counts = useMemo(() => {
     const c = { present: 0, absent: 0, late: 0, excused: 0, unmarked: 0 };
@@ -37,6 +38,27 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
       if (e instanceof SessionChangedError) setMessage('Another window opened a different session. Reload this page to continue.');
       else if (e instanceof StudentBlockedError) setMessage(e.message);
       else setMessage('NOT saved. This phone could not store the change. Try again, and tell your administrator if it keeps happening.');
+    }
+  };
+
+  const markUnmarkedPresent = async () => {
+    const studentIds = view.students.filter((student) => student.status === null).map((student) => student.studentId);
+    if (studentIds.length === 0) return;
+
+    setBulkSaving(true);
+    setMessage(null);
+    try {
+      const saved = await markManyAttendance({ classId: view.classId, date: view.date, studentIds, status: 'present' });
+      onViewChange(await readSessionView(view.classId, view.date));
+      notifyOutboxChanged();
+      setMessage(`Marked ${saved} unmarked student${saved === 1 ? '' : 's'} present on this device.`);
+      if (navigator.onLine) syncNow();
+    } catch (e) {
+      if (e instanceof SessionChangedError) setMessage('Another window opened a different session. Reload this page to continue.');
+      else if (e instanceof StudentBlockedError) setMessage(e.message);
+      else setMessage('NOT saved. This phone could not store the changes. Try again, and tell your administrator if it keeps happening.');
+    } finally {
+      setBulkSaving(false);
     }
   };
 
@@ -76,6 +98,15 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
       <p className="mt-3 text-sm text-gray-700" aria-live="polite">
         {counts.present} present · {counts.absent} absent · {counts.late} late · {counts.excused} excused · <b>{counts.unmarked} unmarked</b>
       </p>
+
+      <button
+        type="button"
+        onClick={markUnmarkedPresent}
+        disabled={bulkSaving || counts.unmarked === 0}
+        className="mt-3 min-h-12 w-full rounded-lg bg-green-700 px-4 text-sm font-semibold text-white disabled:bg-gray-300 disabled:text-gray-600"
+      >
+        {bulkSaving ? 'Marking students…' : counts.unmarked > 0 ? `Mark ${counts.unmarked} unmarked present` : 'All students are marked'}
+      </button>
 
       <div className="mt-3">
         <SeatChart students={view.students} layout={view.layout} highlightUnmarked={highlight} onPick={setPicked} />

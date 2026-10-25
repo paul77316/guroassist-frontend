@@ -1,7 +1,7 @@
 import { IDBObjectStore } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLASS_ID, DATE, freshDevice } from './helpers';
-import { markAttendance, getOutboxRows, readSessionView, discardOperation } from '../lib/attendanceStore';
+import { markAttendance, markManyAttendance, getOutboxRows, readSessionView, discardOperation } from '../lib/attendanceStore';
 import { openSession } from '../lib/sessionManager';
 import { closeAccountDb, openAccountDb, runTx, req } from '../lib/db';
 import { checkGate } from '../lib/gate';
@@ -63,6 +63,30 @@ describe('durable local marks', () => {
     const rows = await getOutboxRows();
     expect(rows).toHaveLength(1);
     expect(rows[0].status).toBe('present');
+  });
+
+  it('marks a group of students present atomically and preserves existing marks', async () => {
+    await mark(1, 'absent');
+
+    const saved = await markManyAttendance({ classId: CLASS_ID, date: DATE, studentIds: [2, 3], status: 'present' });
+    const view = await readSessionView(CLASS_ID, DATE);
+    const rows = await getOutboxRows();
+
+    expect(saved).toBe(2);
+    expect(view.students.map((student) => student.status)).toEqual(['absent', 'present', 'present']);
+    expect(rows).toHaveLength(3);
+  });
+
+  it('writes none of a bulk mark when any selected student is blocked', async () => {
+    await runTx(['outbox'], 'readwrite', ({ outbox }) => {
+      outbox.put({ opId: 'blocked', seq: 1, key: `${CLASS_ID}|${DATE}|2`, classId: CLASS_ID, date: DATE, studentId: 2, status: 'absent', baseVersion: 0, state: 'conflict' });
+    });
+
+    await expect(markManyAttendance({ classId: CLASS_ID, date: DATE, studentIds: [1, 2, 3], status: 'present' }))
+      .rejects.toBeInstanceOf(StudentBlockedError);
+    expect(await getOutboxRows()).toHaveLength(1);
+    const view = await readSessionView(CLASS_ID, DATE);
+    expect(view.students.map((student) => student.status)).toEqual([null, null, null]);
   });
 
   it('queues a change behind an unconfirmed one with an unknown base version', async () => {

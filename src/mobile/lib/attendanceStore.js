@@ -83,6 +83,64 @@ export async function markAttendance({ classId, date, studentId, status, remarks
   });
 }
 
+/** Saves a group of marks in one transaction, so a failed bulk save writes none of them. */
+export async function markManyAttendance({ classId, date, studentIds, status }) {
+  if (!STATUSES.includes(status)) throw new Error('Unknown attendance status.');
+
+  return runTx(['records', 'outbox', 'meta', 'cache'], 'readwrite', async ({ records, outbox, meta, cache }) => {
+    const current = (await req(meta.get('current')))?.value;
+    if (!current || current.classId !== classId || current.date !== date) throw new SessionChangedError();
+
+    const roster = (await req(cache.get(rosterKey(classId, date))))?.value;
+    const rosterStudents = new Map((roster?.students ?? []).map((student) => [student.student_id, student]));
+    const allOperations = await req(outbox.getAll());
+    const sequenceRow = await req(meta.get('seq'));
+    let sequence = sequenceRow?.value ?? 0;
+    let saved = 0;
+
+    for (const studentId of new Set(studentIds)) {
+      const key = recordKey(classId, date, studentId);
+      const record = await req(records.get(key));
+      const baseVersion = record?.baseVersion ?? rosterStudents.get(studentId)?.version ?? 0;
+      const operations = allOperations.filter((operation) => operation.key === key).sort(bySeq);
+      const last = operations[operations.length - 1];
+
+      if (last && (last.state === 'conflict' || last.state === 'rejected')) {
+        throw new StudentBlockedError(last.state);
+      }
+
+      if (last?.state === 'pending') {
+        outbox.put({ ...last, status, remarks: null });
+        allOperations[allOperations.findIndex((operation) => operation.opId === last.opId)] = { ...last, status, remarks: null };
+      } else {
+        sequence += 1;
+        const operation = {
+          opId: newId(),
+          seq: sequence,
+          key,
+          classId,
+          date,
+          studentId,
+          status,
+          remarks: null,
+          baseVersion: last ? null : baseVersion,
+          state: 'pending',
+          createdAt: Date.now(),
+        };
+        outbox.put(operation);
+        allOperations.push(operation);
+      }
+
+      records.put({ key, classId, date, studentId, status, remarks: null, baseVersion });
+      saved += 1;
+    }
+
+    if (saved > 0) meta.put({ k: 'seq', value: sequence });
+
+    return saved;
+  });
+}
+
 /** Shared by sync and conflict resolution: the server confirmed `op` at `version`. */
 export async function applyConfirmed({ outbox, records, cache }, op, version) {
   outbox.delete(op.opId);
