@@ -7,3 +7,6 @@ export const getNotificationPreferences = () => api.get('/notifications/preferen
 
 export const saveNotificationPreferences = (payload) =>
   api.put('/notifications/preferences', payload).then((r) => r.data.data);
+
+export const markAttendanceSyncRead = (payload) =>
+  api.post('/notifications/attendance-syncs/read', payload).then((r) => r.data.data);

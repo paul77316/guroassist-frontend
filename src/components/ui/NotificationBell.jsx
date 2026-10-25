@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useNotificationSummary } from '../../hooks/useNotifications';
+import { useMarkAttendanceSyncRead, useNotificationSummary } from '../../hooks/useNotifications';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const formatAttendanceDate = (date) => {
@@ -14,7 +14,9 @@ const formatAttendanceDate = (date) => {
  */
 export default function NotificationBell() {
   const { data } = useNotificationSummary();
+  const markAttendanceRead = useMarkAttendanceSyncRead();
   const [open, setOpen] = useState(false);
+  const [readError, setReadError] = useState('');
   const ref = useRef(null);
 
   useEffect(() => {
@@ -88,15 +90,30 @@ export default function NotificationBell() {
                 </li>
               )}
               {mobileAttendanceSynced > 0 && mobileAttendanceSyncs.map((sync) => (
-                <li key={`${sync.class}-${sync.attendance_date}`}>
+                <li key={`${sync.class_assignment_id}-${sync.attendance_date}`} className="rounded-md bg-gray-50 p-2">
                   <p className="text-gray-900">Attendance synced for {sync.class}</p>
                   <p className="text-xs text-gray-500">
                     {formatAttendanceDate(sync.attendance_date)} · {plural(sync.marks_count, 'mark', 'marks')}
                   </p>
+                  <button
+                    type="button"
+                    disabled={markAttendanceRead.isPending}
+                    onClick={() => {
+                      setReadError('');
+                      markAttendanceRead.mutate(
+                        { class_assignment_id: sync.class_assignment_id, attendance_date: sync.attendance_date },
+                        { onError: () => setReadError('Could not mark this sync as read. Try again.') },
+                      );
+                    }}
+                    className="mt-2 text-xs font-semibold text-blue-700 underline disabled:text-gray-400"
+                  >
+                    Mark as read
+                  </button>
                 </li>
               ))}
             </ul>
           )}
+          {readError && <p role="alert" className="mt-2 text-xs text-red-600">{readError}</p>}
 
           <Link
             to={due.total > 0 || review > 0 ? '/interventions' : '/attendance'}

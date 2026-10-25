@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getNotificationSummary, getNotificationPreferences, saveNotificationPreferences,
+  getNotificationSummary, getNotificationPreferences, saveNotificationPreferences, markAttendanceSyncRead,
 } from '../services/notificationService';
 
 // The bell asks the server again every minute while the tab is visible, and when the teacher comes back to it.
@@ -30,5 +30,14 @@ export function useSaveNotificationPreferences() {
       qc.setQueryData(['notification-preferences'], data);
       qc.invalidateQueries({ queryKey: ['notification-summary'] });
     },
+  });
+}
+
+export function useMarkAttendanceSyncRead() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: markAttendanceSyncRead,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notification-summary'] }),
   });
 }
