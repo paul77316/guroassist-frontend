@@ -3,10 +3,10 @@
  * offline. It never touches /api or /sanctum, so student data and tokens are never stored in a cache.
  * Local attendance data lives in IndexedDB, managed by the app itself.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `guroassist-mobile-shell-${VERSION}`;
 const ASSET_CACHE = `guroassist-mobile-assets-${VERSION}`;
-const SHELL = ['/m/', '/m/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
+const SHELL = ['/m/index.html', '/m/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -35,11 +35,11 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(SHELL_CACHE).then((cache) => cache.put('/m/', copy));
+            caches.open(SHELL_CACHE).then((cache) => cache.put('/m/index.html', copy));
           }
           return response;
         })
-        .catch(() => caches.match('/m/')),
+        .catch(() => caches.match('/m/index.html')),
     );
     return;
   }
