@@ -54,6 +54,34 @@
   padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
 }
 
+.mobile-login-wordmark {
+  margin-bottom: .25rem;
+  text-align: center;
+}
+
+.mobile-login-wordmark h1,
+.mobile-login-wordmark p {
+  background: linear-gradient(105deg, #2563eb 8%, #1d4ed8 48%, #0e1e47 100%);
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mobile-login-wordmark h1 {
+  font-size: clamp(2rem, 8vw, 2.7rem);
+  font-weight: 850;
+  letter-spacing: -.055em;
+  line-height: 1.1;
+}
+
+.mobile-login-wordmark p {
+  margin-top: .35rem;
+  font-size: .92rem;
+  font-weight: 650;
+  letter-spacing: .01em;
+}
+
 .mobile-brand-mark {
   display: grid;
   width: 3rem;
