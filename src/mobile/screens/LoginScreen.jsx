@@ -35,7 +35,11 @@ export default function LoginScreen({ initialEmail = '', notice = null, onSigned
 
   return (
     <main className="mobile-app mobile-page mobile-login-page">
-      <div className="mobile-brand-heading"><span className="mobile-brand-mark">GA</span><div><p>Teacher mobile app</p><h1>GuroAssist</h1></div></div>
+      <div className="mobile-web-login-brand">
+        <h1><span>Guro</span><span>Assist</span></h1>
+        <p>Teacher Assistant System</p>
+        <div aria-hidden="true" />
+      </div>
       {notice && <p role="status" className="mobile-panel border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
 
       {pending ? (
@@ -58,6 +62,7 @@ export default function LoginScreen({ initialEmail = '', notice = null, onSigned
           <button type="submit" disabled={busy} className="min-h-12 w-full rounded-lg bg-blue-700 font-semibold text-white disabled:opacity-50">{busy ? 'Signing in…' : 'Sign in'}</button>
         </form>
       )}
+      <p className="mobile-powered-by">Powered by <strong>RPGSolution</strong></p>
     </main>
   );
 }
