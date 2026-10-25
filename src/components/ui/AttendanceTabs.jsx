@@ -7,8 +7,9 @@ const tabCls = ({ isActive }) =>
 
 export default function AttendanceTabs() {
   return (
-    <div className="mt-4 flex gap-2 border-b border-gray-200">
-      <NavLink to="/attendance" end className={tabCls}>Take attendance</NavLink>
+    <div className="mt-4 flex gap-2 overflow-x-auto border-b border-gray-200">
+      <NavLink to="/attendance" end className={tabCls}>Daily view</NavLink>
+      <NavLink to="/attendance/seating" className={tabCls}>Seating chart</NavLink>
       <NavLink to="/attendance/report" className={tabCls}>Report</NavLink>
     </div>
   );

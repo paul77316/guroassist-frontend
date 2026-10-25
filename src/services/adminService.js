@@ -17,3 +17,8 @@ export const updateTeacherAccount = ({ id, ...payload }) =>
   api.put(`/admin/teachers/${id}`, payload).then((r) => r.data.data);
 export const resetTeacherPassword = ({ id, ...payload }) =>
   api.put(`/admin/teachers/${id}/password`, payload).then((r) => r.data.data);
+
+export const listMobileDevices = (status) =>
+  api.get('/admin/mobile-devices', { params: status ? { status } : {} }).then((r) => r.data.data);
+export const approveMobileDevice = (id) => api.post(`/admin/mobile-devices/${id}/approve`).then((r) => r.data.data);
+export const revokeMobileDevice = (id) => api.post(`/admin/mobile-devices/${id}/revoke`).then((r) => r.data.data);

@@ -32,3 +32,4 @@ DEPLOYMENT.md
 MIGRATION_GUIDE_VAGRANT_TO_PC.md
 PROD_SERVER_HANDOVER.md
 .gitignore
+package-lock.json

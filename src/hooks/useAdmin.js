@@ -64,3 +64,16 @@ function useTeacherAccountMutation(mutationFn) {
 export const useCreateTeacherAccount = () => useTeacherAccountMutation(svc.createTeacherAccount);
 export const useUpdateTeacherAccount = () => useTeacherAccountMutation(svc.updateTeacherAccount);
 export const useResetTeacherPassword = () => useTeacherAccountMutation(svc.resetTeacherPassword);
+
+const MOBILE_DEVICES = ['admin', 'mobile-devices'];
+
+export const useMobileDevices = (status) =>
+  useQuery({ queryKey: [...MOBILE_DEVICES, status ?? 'all'], queryFn: () => svc.listMobileDevices(status), staleTime: 15_000 });
+
+function useDeviceMutation(mutationFn) {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn, onSuccess: () => qc.invalidateQueries({ queryKey: MOBILE_DEVICES }) });
+}
+
+export const useApproveMobileDevice = () => useDeviceMutation(svc.approveMobileDevice);
+export const useRevokeMobileDevice = () => useDeviceMutation(svc.revokeMobileDevice);

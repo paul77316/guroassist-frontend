@@ -11,6 +11,8 @@ import StudentsList from './pages/students/StudentsList'
 import ClassesList from './pages/classes/ClassesList';
 import ClassDetailPage from './pages/classes/ClassDetailPage';
 import AttendancePage from './pages/attendance/AttendancePage';
+import SeatingPage from './pages/attendance/SeatingPage';
+import MobileDevicesPage from './pages/admin/MobileDevicesPage';
 import TermsPage from './pages/admin/TermsPage';
 import SetupPage from './pages/admin/SetupPage';
 import AttendanceReportPage from './pages/attendance/AttendanceReportPage';
@@ -46,6 +48,7 @@ export default function App() {
             <Route path="/students" element={<StudentsList />} />
             <Route path="/classes" element={<ClassesList />} />
             <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/attendance/seating" element={<SeatingPage />} />
             <Route path="/classes/:id" element={<ClassDetailPage />} />
             <Route path="/attendance/report" element={<AttendanceReportPage />} />
             <Route path="/interventions" element={<InterventionsPage />} />
@@ -61,6 +64,7 @@ export default function App() {
             </Route>
             <Route element={<AdminRoute />}>
               <Route path="/admin/teachers" element={<TeacherAccountsPage />} />
+              <Route path="/admin/devices" element={<MobileDevicesPage />} />
               <Route path="/admin/terms" element={<TermsPage />} />
               <Route path="/admin/academic-years" element={<SetupPage key="academic-years" path="academic-years" />} />
               <Route path="/admin/grade-levels" element={<SetupPage key="grade-levels" path="grade-levels" />} />
