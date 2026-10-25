@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { getSession, expireSession } from './mobileAuth';
+import { getApiOrigin } from '../../services/apiOrigin';
 
 /**
  * The mobile app talks only to /api/mobile with a bearer token. It sends no cookies on purpose:
  * a web session cookie would be authenticated first by the server and refused on these routes.
  */
 const mobileApi = axios.create({
-  baseURL: '/api/mobile',
+  baseURL: `${getApiOrigin()}/api/mobile`,
   withCredentials: false,
   timeout: 15000,
   headers: { Accept: 'application/json' },

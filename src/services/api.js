@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getApiOrigin } from './apiOrigin';
 
 // Sanctum's SPA (cookie) auth requires:
 //  - withCredentials so the browser sends/receives the session + XSRF cookies
@@ -6,8 +7,9 @@ import axios from 'axios';
 //    (axios does this automatically when xsrfCookieName/xsrfHeaderName are set
 //    and the request is same-origin or the domain is trusted)
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${getApiOrigin()}/api`,
   withCredentials: true,
+  withXSRFToken: true,
   xsrfCookieName: 'XSRF-TOKEN',
   xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
@@ -43,7 +45,7 @@ api.interceptors.response.use(
 
 // Must be called once before login/logout so Laravel issues the XSRF cookie.
 export async function ensureCsrfCookie() {
-  await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+  await axios.get(`${getApiOrigin()}/sanctum/csrf-cookie`, { withCredentials: true });
 }
 
 export default api;
