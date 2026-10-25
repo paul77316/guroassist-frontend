@@ -8,6 +8,7 @@ import { getApiOrigin } from '../../services/apiOrigin';
  */
 const mobileApi = axios.create({
   baseURL: `${getApiOrigin()}/api/mobile`,
+  adapter: 'fetch',
   withCredentials: false,
   timeout: 15000,
   headers: { Accept: 'application/json' },
