@@ -23,7 +23,7 @@ export default function NotificationPreferencesCard() {
     <div className="mt-6 rounded-lg border border-gray-200 p-4">
       <h3 className="text-sm font-semibold text-gray-900">In-app reminders</h3>
       <p className="mt-1 text-xs text-gray-500">
-        Show a bell at the top of the screen with a count of follow-ups that are due. It only updates while
+        Show a bell at the top of the screen with a count of follow-ups due and attendance marks synced from mobile today. It only updates while
         GuroAssist is open, shows counts and never names or notes, and sends nothing by email or text. It is off
         until you switch it on.
       </p>

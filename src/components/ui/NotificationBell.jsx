@@ -35,6 +35,7 @@ export default function NotificationBell() {
 
   const due = data.follow_ups_due;
   const review = data.students_to_review;
+  const mobileAttendanceSynced = data.mobile_attendance_synced ?? 0;
   const count = data.badge_count;
 
   const parts = [];
@@ -81,15 +82,20 @@ export default function NotificationBell() {
                   <p className="text-gray-900">{plural(review, 'student', 'students')} to review</p>
                 </li>
               )}
+              {mobileAttendanceSynced > 0 && (
+                <li>
+                  <p className="text-gray-900">{plural(mobileAttendanceSynced, 'attendance mark', 'attendance marks')} synced from mobile today</p>
+                </li>
+              )}
             </ul>
           )}
 
           <Link
-            to="/interventions"
+            to={due.total > 0 || review > 0 ? '/interventions' : '/attendance'}
             onClick={() => setOpen(false)}
             className="mt-3 inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
           >
-            Open Interventions
+            {due.total > 0 || review > 0 ? 'Open Interventions' : 'Open Attendance'}
           </Link>
 
           <p className="mt-3 text-xs text-gray-400">
