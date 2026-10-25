@@ -19,7 +19,7 @@ export default function SyncBadge({ summary, syncing, online, storageOk, authExp
 
   return (
     <div className="flex flex-wrap items-center gap-2" role="status" aria-live="polite">
-      <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${colors[tone]}`}>
+      <span data-tone={tone} className={`mobile-sync-pill inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${colors[tone]}`}>
         <span aria-hidden="true">{icon}</span>
         {text}
       </span>

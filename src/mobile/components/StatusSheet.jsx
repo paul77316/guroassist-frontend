@@ -19,7 +19,7 @@ export default function StatusSheet({ student, onChoose, onClose }) {
   }, [student]);
 
   return (
-    <dialog ref={ref} onClose={onClose} className="m-auto w-[min(92vw,22rem)] rounded-2xl p-4 backdrop:bg-black/50">
+    <dialog ref={ref} onClose={onClose} className="mobile-status-dialog m-auto w-[min(92vw,22rem)] rounded-2xl p-5 backdrop:bg-black/50">
       {student && (
         <>
           <h2 className="text-base font-semibold text-gray-900">{student.name}</h2>
@@ -30,13 +30,13 @@ export default function StatusSheet({ student, onChoose, onClose }) {
                 type="button"
                 onClick={() => onChoose(status)}
                 aria-pressed={student.status === status}
-                className={`min-h-14 rounded-lg border-2 text-sm font-semibold ${BTN[status]} ${student.status === status ? 'bg-gray-100' : 'bg-white'}`}
+                className={`mobile-status-button min-h-14 border-2 text-sm ${BTN[status]} ${student.status === status ? 'bg-gray-100' : 'bg-white'}`}
               >
                 {STATUS_META[status].letter} · {STATUS_META[status].label}
               </button>
             ))}
           </div>
-          <button type="button" onClick={onClose} className="min-h-12 w-full rounded-lg border border-gray-300 text-sm">Cancel</button>
+          <button type="button" onClick={onClose} className="min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 text-sm font-semibold text-slate-700">Cancel</button>
         </>
       )}
     </dialog>

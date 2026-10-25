@@ -28,13 +28,15 @@ function Seat({ student, position, highlight, onPick }) {
       type="button"
       onClick={() => onPick(student)}
       aria-label={label}
-      className={`flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 px-1 py-1 text-center text-xs text-gray-900 active:scale-95 ${
+      data-status={student.status ?? 'unmarked'}
+      className={`mobile-seat flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border-2 px-1 py-1 text-center text-xs text-gray-900 active:scale-95 ${
         marked ? STATUS_STYLE[student.status] : 'border-dashed border-gray-400 bg-white'
       } ${!marked && highlight ? 'ring-4 ring-amber-400' : ''} ${student.syncState === 'conflict' || student.syncState === 'rejected' ? 'ring-4 ring-red-500' : ''}`}
     >
-      <span className="w-full truncate">{student.name}</span>
+      {position && <span className="mobile-seat-position">{position}</span>}
+      <span className="mobile-seat-name">{student.name}</span>
       <span className="flex items-center gap-1">
-        <span className={`rounded px-1.5 text-xs font-bold text-white ${marked ? BADGE_STYLE[student.status] : 'bg-gray-400'}`}>
+        <span className={`mobile-seat-mark rounded px-1.5 text-xs font-bold text-white ${marked ? BADGE_STYLE[student.status] : 'bg-gray-400'}`}>
           {marked ? STATUS_META[student.status].letter : '–'}
         </span>
         {student.syncState && <span aria-hidden="true" className="text-[10px] text-gray-600">{student.syncState === 'pending' ? '●' : '!'}</span>}
@@ -50,11 +52,11 @@ export default function SeatChart({ students, layout, highlightUnmarked, onPick 
   const unseated = students.filter((s) => !seated.has(s.studentId));
 
   return (
-    <div>
+    <div className="mobile-seat-card">
       {layout && cells.length > 0 ? (
         <>
-          <p className="mb-1 border-b-2 border-gray-300 pb-1 text-center text-xs text-gray-500">FRONT OF ROOM</p>
-          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))` }} role="group" aria-label="Seating chart">
+          <p className="mobile-room-label">FRONT OF ROOM</p>
+          <div className="mobile-seat-grid grid gap-1.5" style={{ gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))` }} role="group" aria-label="Seating chart">
             {cells.map((id, index) => {
               const student = id !== null ? byId.get(id) : null;
               const position = `${Math.floor(index / layout.cols) + 1}-${(index % layout.cols) + 1}`;
@@ -67,14 +69,14 @@ export default function SeatChart({ students, layout, highlightUnmarked, onPick 
           </div>
         </>
       ) : (
-        <p className="rounded-lg border border-dashed border-gray-300 p-3 text-center text-sm text-gray-600">
+        <p className="rounded-lg border border-dashed border-gray-300 bg-slate-50 p-4 text-center text-sm leading-6 text-gray-600">
           No seating chart yet. Set one up on the web, or mark students from the list below.
         </p>
       )}
 
       {unseated.length > 0 && (
         <div className="mt-4">
-          <h3 className="mb-1 text-sm font-semibold text-gray-800">Students without a seat ({unseated.length})</h3>
+          <h3 className="mobile-subsection-title">Students without a seat ({unseated.length})</h3>
           <div className="grid grid-cols-3 gap-1.5">
             {unseated.map((s) => <Seat key={s.studentId} student={s} position={null} highlight={highlightUnmarked} onPick={onPick} />)}
           </div>

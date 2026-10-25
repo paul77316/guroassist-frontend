@@ -56,7 +56,7 @@ export default function ProblemsPanel({ refreshKey }) {
   };
 
   return (
-    <section className="mt-4 rounded-xl border-2 border-red-300 bg-red-50 p-3" aria-label="Changes that need attention">
+    <section className="mobile-problem-card mt-4 p-3" aria-label="Changes that need attention">
       <h2 className="text-sm font-bold text-red-900">Changes that need your attention</h2>
       <p className="mt-1 text-xs text-red-900">Your changes are kept on this device. A new session stays blocked until each one is settled.</p>
       {error && <p role="alert" className="mt-2 text-sm font-medium text-red-800">{error}</p>}

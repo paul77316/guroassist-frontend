@@ -54,10 +54,10 @@ export default function ClassesScreen({ onOpened, onBack, onAuthProblem }) {
   const currentClass = current && classes.find((c) => c.id === current.classId);
 
   return (
-    <main className="mx-auto max-w-lg p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Choose a class</h1>
-        {onBack && <button onClick={onBack} className="min-h-11 rounded-lg border border-gray-300 px-3 text-sm">Back to session</button>}
+    <main className="mobile-app mobile-page">
+      <div className="mobile-screen-heading">
+        <div className="mobile-brand-heading"><span className="mobile-brand-mark">GA</span><div><p>GuroAssist</p><h1>Choose a class</h1></div></div>
+        {onBack && <button onClick={onBack} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm">Back to session</button>}
       </div>
 
       {offline && <p role="status" className="mt-2 rounded-lg bg-gray-100 p-2 text-sm text-gray-700">No connection. Showing classes saved on this phone.</p>}
@@ -68,14 +68,14 @@ export default function ClassesScreen({ onOpened, onBack, onAuthProblem }) {
       )}
 
       {current && (
-        <div className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
+        <div className="mobile-panel mt-3 border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
           Open now: <b>{currentClass ? label(currentClass) : `Class ${current.classId}`}</b> · {current.date}
         </div>
       )}
 
-      <label className="mt-4 block text-sm font-medium text-gray-800">
+      <label className="mobile-field-label mobile-panel mt-4 block p-4">
         Date
-        <input type="date" value={date} max={todayLocal()} onChange={(e) => e.target.value && setDate(e.target.value)} className="mt-1 min-h-12 w-full rounded-lg border border-gray-400 px-3 text-base" />
+        <input type="date" value={date} max={todayLocal()} onChange={(e) => e.target.value && setDate(e.target.value)} className="mobile-field mt-1 w-full px-3 text-base" />
       </label>
 
       {blocked && (
@@ -102,7 +102,7 @@ export default function ClassesScreen({ onOpened, onBack, onAuthProblem }) {
               <button
                 onClick={() => open(c.id)}
                 disabled={opening !== null}
-                className="min-h-14 w-full rounded-xl border border-gray-300 bg-white px-4 text-left text-base font-medium text-gray-900 active:bg-gray-50 disabled:opacity-50"
+                className="mobile-class-option disabled:opacity-50"
               >
                 {label(c)}
                 {opening === c.id && <span className="ml-2 text-sm text-gray-500">Opening…</span>}

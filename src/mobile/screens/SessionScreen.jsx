@@ -73,8 +73,8 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
   };
 
   return (
-    <main className="mx-auto max-w-lg p-3 pb-24">
-      <header className="flex flex-wrap items-start justify-between gap-2">
+    <main className="mobile-app mobile-page">
+      <header className="mobile-session-banner">
         <div>
           <h1 className="text-lg font-bold text-gray-900">{classLabel}</h1>
           <p className="text-sm text-gray-600">{view.date}</p>
@@ -103,7 +103,7 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
         type="button"
         onClick={markUnmarkedPresent}
         disabled={bulkSaving || counts.unmarked === 0}
-        className="mt-3 min-h-12 w-full rounded-lg bg-green-700 px-4 text-sm font-semibold text-white disabled:bg-gray-300 disabled:text-gray-600"
+        className="mobile-mark-all mt-3 min-h-12 w-full px-4 text-sm disabled:bg-gray-300 disabled:text-gray-600"
       >
         {bulkSaving ? 'Marking students…' : counts.unmarked > 0 ? `Mark ${counts.unmarked} unmarked present` : 'All students are marked'}
       </button>
@@ -114,7 +114,7 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
 
       <ProblemsPanel refreshKey={`${summary.conflict}-${summary.rejected}-${summary.total}`} />
 
-      <nav className="fixed inset-x-0 bottom-0 border-t border-gray-300 bg-white p-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+      <nav className="mobile-actionbar fixed inset-x-0 bottom-0 border-t border-gray-300 bg-white p-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
         <div className="mx-auto flex max-w-lg gap-2">
           <button onClick={() => setHighlight((h) => !h)} aria-pressed={highlight} className={`min-h-12 flex-1 rounded-lg border text-sm font-semibold ${highlight ? 'border-amber-500 bg-amber-100' : 'border-gray-300'}`}>Unmarked</button>
           <button onClick={syncButton} disabled={sync.syncing} className="min-h-12 flex-1 rounded-lg bg-blue-700 text-sm font-semibold text-white disabled:opacity-50">{sync.syncing ? 'Syncing…' : 'Sync now'}</button>
