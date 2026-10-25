@@ -38,7 +38,7 @@ export default function AttendancePage() {
     if (!classId && classes.length > 0) setClassId(String(classes[0].id));
   }, [classes, classId]);
 
-  const { data, isLoading, isError, error } = useAttendance(classId, date);
+  const { data, isLoading, isError, error } = useAttendance(classId, date, { poll: !correcting });
   const students = data?.students ?? [];
 
   const counts = { present: 0, absent: 0, late: 0, excused: 0, unmarked: 0 };
@@ -104,6 +104,7 @@ export default function AttendancePage() {
               <input id="att-date" type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
             </div>
           </div>
+          <p className="mt-2 text-xs text-gray-500">This view checks for mobile attendance syncs every 30 seconds while open.</p>
 
           {isLoading ? (
             <div className="mt-6 text-sm text-gray-500">Loading students…</div>

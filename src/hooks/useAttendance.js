@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { correctAttendance, getAttendance, getSeatingLayout, saveSeatingLayout } from '../services/attendanceService';
 
-export function useAttendance(classId, date) {
+export function useAttendance(classId, date, { poll = false } = {}) {
   return useQuery({
     queryKey: ['attendance', classId, date],
     queryFn: () => getAttendance({ classId, date }),
     enabled: !!classId && !!date,
+    refetchInterval: poll ? 30_000 : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 
