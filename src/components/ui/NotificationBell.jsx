@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { useNotificationSummary } from '../../hooks/useNotifications';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const formatAttendanceDate = (date) => {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 /**
  * The reminder bell in the top bar. It shows counts only, never names or notes, and only appears
@@ -36,6 +40,7 @@ export default function NotificationBell() {
   const due = data.follow_ups_due;
   const review = data.students_to_review;
   const mobileAttendanceSynced = data.mobile_attendance_synced ?? 0;
+  const mobileAttendanceSyncs = data.mobile_attendance_syncs ?? [];
   const count = data.badge_count;
 
   const parts = [];
@@ -82,11 +87,14 @@ export default function NotificationBell() {
                   <p className="text-gray-900">{plural(review, 'student', 'students')} to review</p>
                 </li>
               )}
-              {mobileAttendanceSynced > 0 && (
-                <li>
-                  <p className="text-gray-900">{plural(mobileAttendanceSynced, 'attendance mark', 'attendance marks')} synced from mobile today</p>
+              {mobileAttendanceSynced > 0 && mobileAttendanceSyncs.map((sync) => (
+                <li key={`${sync.class}-${sync.attendance_date}`}>
+                  <p className="text-gray-900">Attendance synced for {sync.class}</p>
+                  <p className="text-xs text-gray-500">
+                    {formatAttendanceDate(sync.attendance_date)} · {plural(sync.marks_count, 'mark', 'marks')}
+                  </p>
                 </li>
-              )}
+              ))}
             </ul>
           )}
 
