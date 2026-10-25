@@ -28,17 +28,18 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 1.25rem;
-  padding-top: 0;
-  padding-bottom: 2rem;
+  gap: 0;
+  padding: 0;
 }
 
 .mobile-web-login-brand {
-  width: calc(100% + 2rem);
-  min-height: 10rem;
-  margin: 0 -1rem .5rem;
-  padding: calc(1.5rem + env(safe-area-inset-top)) 1.25rem 1.5rem;
-  border-radius: 0 0 1.4rem 1.4rem;
+  display: flex;
+  min-height: 28vh;
+  min-height: max(28vh, 12rem);
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(1.5rem + env(safe-area-inset-top)) 1.5rem 1.5rem;
+  border-radius: 0 0 1.5rem 1.5rem;
   background: linear-gradient(90deg, #1e3a8a, #1e40af);
   color: #fff;
   box-shadow: 0 12px 24px rgb(14 30 71 / 14%);
@@ -46,7 +47,7 @@
 
 .mobile-web-login-brand h1 {
   color: #fff;
-  font-size: 1.55rem;
+  font-size: clamp(2.35rem, 10vw, 3.25rem);
   font-weight: 800;
   letter-spacing: -.035em;
 }
@@ -77,6 +78,17 @@
 .mobile-powered-by strong {
   color: #53637d;
   font-weight: 750;
+}
+
+.mobile-login-content {
+  display: flex;
+  width: min(100%, 32rem);
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.1rem;
+  margin-inline: auto;
+  padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
 }
 
 .mobile-brand-mark {

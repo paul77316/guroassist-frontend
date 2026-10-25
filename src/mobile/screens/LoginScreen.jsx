@@ -40,6 +40,7 @@ export default function LoginScreen({ initialEmail = '', notice = null, onSigned
         <p>Teacher Assistant System</p>
         <div aria-hidden="true" />
       </div>
+      <div className="mobile-login-content">
       {notice && <p role="status" className="mobile-panel border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
 
       {pending ? (
@@ -63,6 +64,7 @@ export default function LoginScreen({ initialEmail = '', notice = null, onSigned
         </form>
       )}
       <p className="mobile-powered-by">Powered by <strong>RPGSolution</strong></p>
+      </div>
     </main>
   );
 }
