@@ -212,13 +212,23 @@ function SetPanel({ exam, setId, label, maxQuestions }) {
         <p className="text-sm text-gray-600">
           Set {label}: {questions.length} of {maxQuestions} questions
         </p>
-        <button
-          onClick={() => setForm('new')}
-          disabled={full || isLoading || isError}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-        >
-          Add question
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {questions.length > 0 && (
+            <Link
+              to={`/exams/${exam.id}/print?set=${setId}`}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+            >
+              Print
+            </Link>
+          )}
+          <button
+            onClick={() => setForm('new')}
+            disabled={full || isLoading || isError}
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          >
+            Add question
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

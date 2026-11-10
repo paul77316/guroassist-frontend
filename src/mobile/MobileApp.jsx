@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import LoginScreen from './screens/LoginScreen';
 import ClassesScreen from './screens/ClassesScreen';
 import SessionScreen from './screens/SessionScreen';
+import ExamScanScreen from './screens/ExamScanScreen';
 import { openAccountDb } from './lib/db';
 import { getSession, hasLiveToken } from './lib/mobileAuth';
 import { logout } from './lib/authActions';
@@ -14,7 +15,7 @@ export default function MobileApp() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState(null);
   const [classLabel, setClassLabel] = useState('Attendance');
-  const [screen, setScreen] = useState('session'); // session | classes
+  const [screen, setScreen] = useState('session'); // session | classes | exam-scan
   const [authExpired, setAuthExpired] = useState(false);
   const [notice, setNotice] = useState(null);
   const { summary } = useOutboxSummary();
@@ -110,11 +111,16 @@ export default function MobileApp() {
     return <LoginScreen initialEmail={getSession()?.user?.email ?? ''} notice={notice} onSignedIn={enter} />;
   }
 
+  if (screen === 'exam-scan') {
+    return <ExamScanScreen onBack={() => setScreen(view ? 'session' : 'classes')} onAuthProblem={handleAuthProblem} />;
+  }
+
   if (screen === 'classes' || !view) {
     return (
       <ClassesScreen
         onBack={view ? () => setScreen('session') : null}
         onAuthProblem={handleAuthProblem}
+        onOpenExamScanner={() => setScreen('exam-scan')}
         onOpened={(opened) => { setView(opened); setScreen('session'); }}
       />
     );
@@ -127,6 +133,7 @@ export default function MobileApp() {
       authExpired={authExpired}
       onViewChange={setView}
       onChangeSession={() => setScreen('classes')}
+      onOpenExamScanner={() => setScreen('exam-scan')}
       onSignIn={() => { setNotice('Sign in to sync your changes.'); setPhase('login'); }}
       onSignOut={signOut}
     />

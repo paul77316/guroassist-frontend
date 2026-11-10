@@ -5,7 +5,7 @@ import { todayLocal } from '../hooks';
 
 const label = (c) => `${c.grade_level ?? ''} - ${c.section ?? ''} (${c.subject ?? ''})`;
 
-export default function ClassesScreen({ onOpened, onBack, onAuthProblem }) {
+export default function ClassesScreen({ onOpened, onBack, onAuthProblem, onOpenExamScanner }) {
   const [classes, setClasses] = useState([]);
   const [offline, setOffline] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -59,6 +59,8 @@ export default function ClassesScreen({ onOpened, onBack, onAuthProblem }) {
         <div className="mobile-brand-heading"><span className="mobile-brand-mark">GA</span><div><p>GuroAssist</p><h1>Choose a class</h1></div></div>
         {onBack && <button onClick={onBack} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm">Back to session</button>}
       </div>
+
+      <button onClick={onOpenExamScanner} className="mt-3 min-h-12 w-full rounded-xl border border-blue-700 px-4 text-sm font-semibold text-blue-800">Scan exam sheets</button>
 
       {offline && <p role="status" className="mt-2 rounded-lg bg-gray-100 p-2 text-sm text-gray-700">No connection. Showing classes saved on this phone.</p>}
       {loadError && (
