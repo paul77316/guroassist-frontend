@@ -8,7 +8,7 @@ import { syncNow } from '../lib/sync';
 import { SessionChangedError, StudentBlockedError } from '../lib/constants';
 import { notifyOutboxChanged, useOnline, useOutboxSummary, useSyncState } from '../hooks';
 
-export default function SessionScreen({ view, classLabel, authExpired, onViewChange, onChangeSession, onOpenExamScanner, onSignIn, onSignOut }) {
+export default function SessionScreen({ view, classLabel, authExpired, onViewChange, onChangeSession, onOpenExamScanner, onSignIn, onSignOut, menu }) {
   const online = useOnline();
   const sync = useSyncState();
   const { summary, storageOk } = useOutboxSummary();
@@ -75,6 +75,7 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
   return (
     <main className="mobile-app mobile-page">
       <header className="mobile-session-banner">
+        {menu}
         <div>
           <h1 className="text-lg font-bold text-gray-900">{classLabel}</h1>
           <p className="text-sm text-gray-600">{view.date}</p>
@@ -94,8 +95,6 @@ export default function SessionScreen({ view, classLabel, authExpired, onViewCha
         </div>
       )}
       {message && <p role="alert" className="mt-2 rounded-lg bg-red-100 p-2 text-sm font-medium text-red-900">{message}</p>}
-
-      <button onClick={onOpenExamScanner} className="mt-3 min-h-11 rounded-lg border border-blue-700 px-3 text-sm font-semibold text-blue-800">Scan exam sheets</button>
 
       <p className="mt-3 text-sm text-gray-700" aria-live="polite">
         {counts.present} present · {counts.absent} absent · {counts.late} late · {counts.excused} excused · <b>{counts.unmarked} unmarked</b>

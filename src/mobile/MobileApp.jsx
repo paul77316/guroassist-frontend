@@ -9,6 +9,7 @@ import { logout } from './lib/authActions';
 import { cacheGet } from './lib/attendanceStore';
 import { resumeSession } from './lib/sessionManager';
 import { useAutoSync, useOutboxSummary } from './hooks';
+import MobileMenu from './components/MobileMenu';
 
 export default function MobileApp() {
   const [phase, setPhase] = useState('boot'); // boot | login | app | storage-error
@@ -112,7 +113,7 @@ export default function MobileApp() {
   }
 
   if (screen === 'exam-scan') {
-    return <ExamScanScreen onBack={() => setScreen(view ? 'session' : 'classes')} onAuthProblem={handleAuthProblem} />;
+    return <><ExamScanScreen onBack={() => setScreen(view ? 'session' : 'classes')} onAuthProblem={handleAuthProblem} menu={<MobileMenu active="scanner" onAttendance={() => setScreen(view ? 'session' : 'classes')} onScanner={() => setScreen('exam-scan')} />} /></>;
   }
 
   if (screen === 'classes' || !view) {
@@ -122,6 +123,7 @@ export default function MobileApp() {
         onAuthProblem={handleAuthProblem}
         onOpenExamScanner={() => setScreen('exam-scan')}
         onOpened={(opened) => { setView(opened); setScreen('session'); }}
+        menu={<MobileMenu active="attendance" onAttendance={() => setScreen(view ? 'session' : 'classes')} onScanner={() => setScreen('exam-scan')} />}
       />
     );
   }
@@ -136,6 +138,7 @@ export default function MobileApp() {
       onOpenExamScanner={() => setScreen('exam-scan')}
       onSignIn={() => { setNotice('Sign in to sync your changes.'); setPhase('login'); }}
       onSignOut={signOut}
+      menu={<MobileMenu active="attendance" onAttendance={() => setScreen(view ? 'session' : 'classes')} onScanner={() => setScreen('exam-scan')} />}
     />
   );
 }

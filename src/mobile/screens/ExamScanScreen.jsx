@@ -3,7 +3,7 @@ import mobileApi from '../lib/mobileApi';
 import { aggregateSheet, mergeSheetCounts, LETTERS } from './scannerCore';
 import { readSheetToken, scanAnswerSheet } from '../lib/examScanner';
 
-export default function ExamScanScreen({ onBack, onAuthProblem }) {
+export default function ExamScanScreen({ onBack, onAuthProblem, menu }) {
   const inputRef = useRef(null);
   const [manifest, setManifest] = useState(null);
   const [batches, setBatches] = useState([]);
@@ -112,9 +112,9 @@ export default function ExamScanScreen({ onBack, onAuthProblem }) {
   };
 
   return (
-    <main className="mx-auto max-w-lg p-4 pb-8">
+    <main className="mobile-app mobile-page mx-auto max-w-lg pb-8">
       <header className="flex items-center justify-between gap-2">
-        <div><p className="text-xs font-semibold uppercase text-blue-700">GuroAssist</p><h1 className="text-xl font-bold text-gray-900">Exam sheet scanner</h1></div>
+        <div className="flex items-center gap-3">{menu}<div><p className="text-xs font-semibold uppercase text-blue-700">GuroAssist</p><h1 className="text-xl font-bold text-gray-900">Exam sheet scanner</h1></div></div>
         <button onClick={onBack} className="min-h-11 rounded-lg border border-gray-300 px-3 text-sm">Back</button>
       </header>
       <p className="mt-2 text-sm text-gray-700">Scan printed answer sheets to make class totals. Student names, sheet photos, and individual answers are not saved.</p>
