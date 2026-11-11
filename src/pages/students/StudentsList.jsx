@@ -39,6 +39,10 @@ export default function StudentsList() {
   const archiveStudent = useArchiveStudent();
 
   const students = data?.data ?? [];
+  const formatStudentName = (student) => {
+    const givenNames = [student.first_name, student.middle_name].filter(Boolean).join(' ');
+    return [student.last_name, givenNames].filter(Boolean).join(', ') || student.full_name;
+  };
 
   // if the last student on the last page is archived, step back to a page that exists
   const lastPage = data?.meta?.last_page ?? 1;
@@ -117,7 +121,7 @@ export default function StudentsList() {
               {students.map((student) => (
                 <tr key={student.id}>
                   <td className="px-4 py-2 text-gray-600">{student.student_id}</td>
-                  <td className="px-4 py-2 font-medium text-gray-900">{student.full_name}</td>
+                  <td className="px-4 py-2 font-medium text-gray-900">{formatStudentName(student)}</td>
                   <td className="px-4 py-2 text-gray-600">
                     {student.grade_level ?? '—'}
                   </td>
